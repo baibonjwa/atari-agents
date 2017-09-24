@@ -104,3 +104,4 @@ venv.bak/
 .mypy_cache/
 
 random_agent_results/
+.DS_Store
