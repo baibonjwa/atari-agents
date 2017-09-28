@@ -22,7 +22,7 @@ class TabularQAgent(object):
     if eps is None:
       eps = self.config["eps"]
     # epsilon greedy
-    action = np.argmax(self.q[observation.item()]) if np.random.random() > eps else self.action_space.sample()
+    action = np.argmax(self.q[obs.item()]) if np.random.random() > eps else self.action_space.sample()
     return action
 
   def learn(self, env):
