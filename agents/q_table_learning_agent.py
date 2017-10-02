@@ -7,9 +7,10 @@ class QTableLearningAgent(object):
         self.Q = np.zeros([env.observation_space.n, env.action_space.n])
         self.lr = .8
         self.y = .95
+        self.num_episodes = 2000
 
     def act(self, observation, reward, done):
-        TBD
+        action = np.argmax(Q[s, :] + np.random.randn(1,env.action_space.n)*(1./(i+1)))
 
     def learn(self, env):
         num_episodes = 2000

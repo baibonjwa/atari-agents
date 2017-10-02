@@ -41,12 +41,13 @@ def main():
 
     env = gym.make(args.env_id)
 
-    outdir = './random_agent_results'
+    agent_module = importlib.import_module(underscore('agents.' + args.agent))
+    agent_klass = getattr(agent_module, args.agent)
+
+    outdir = './random_agent_results/' + args.env_id + '/' + str(agent_klass.__name__) + '/'
     env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
 
-    agent_module = importlib.import_module(underscore('agents.' + args.agent))
-    agent_klass = getattr(agent_module, args.agent)
     agent = agent_klass(env)
     episode_count = 100
     episode_rewards = []
