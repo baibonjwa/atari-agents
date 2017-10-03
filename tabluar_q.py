@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import gym
 from gym import wrappers
+import matplotlib.pyplot as plt
 
 env = gym.make('FrozenLake-v0')
 
@@ -22,7 +23,7 @@ Q = np.zeros([env.observation_space.n, env.action_space.n])
 lr = .8
 y = .95
 
-num_episodes = 1000
+num_episodes = 2000
 rList = []
 for i in range(num_episodes):
   #Reset environment and get first new observation
@@ -41,11 +42,13 @@ for i in range(num_episodes):
         Q[s, a] = Q[s, a] + lr * (r + y * np.max(Q[s1, :]) - Q[s, a])
         rAll += r
         s = s1
-        print(done)
         if done is True:
             break
     rList.append(rAll)
+    print("Percent of succesful episodes: " +  str(sum(rList)/num_episodes))
+
 env.close()
 
-print("Score over time: " +  str(sum(rList)/num_episodes))
+plt.plot(rList)
+
 print(Q)
