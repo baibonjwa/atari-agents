@@ -3,10 +3,11 @@ ignored-modules = gym
 
 [General]
 init-hook='import sys; sys.path.append("/Users/happybai/tensorflow/lib/python3.5/site-packages/")'
+contextmanager-decorators=contextlib.contextmanager,tensorflow.python.util.tf_contextlib.contextmanager
 
 [MESSAGES CONTROL]
 # C0103:Invalid constant name
-# C0111 Missing docstring 
+# C0111 Missing docstring
 # I0011 Warning locally suppressed using disable-msg
 # I0012 Warning locally suppressed using disable-msg
 # W0704 Except doesn't do anything Used when an except clause does nothing but "pass" and there is no "else" clause
