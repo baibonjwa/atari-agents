@@ -1,6 +1,7 @@
 from __future__ import division
 
 import gym
+import pdb
 import numpy as np
 import random
 import tensorflow as tf
@@ -28,9 +29,11 @@ class Qnetwork():
         xavier_init = tf.contrib.layers.xavier_initializer()
         self.AW = tf.Variable(xavier_init([h_size//2, env.actions]))
         self.VW = tf.Variable(xavier_init([h_size//2, 1]))
+        pdb.set_trace()
         self.Advantage = tf.matmul(self.streamA, self.AW)
         self.Value = tf.matmul(self.streamV, self.AW)
 
+        # ?
         self.Qout = self.Value + tf.subtract(self.Advantage, tf.reduce_mean(self.Advantage, axis=1, keep_dims=True))
         self.predict = tf.argmax(self.Qout, 1)
 
@@ -99,7 +102,7 @@ myBuffer = experience_buffer()
 e = startE
 stepDrop = (startE - endE) / annealing_steps
 
-jList = []
+#  jList = []
 rList = []
 total_steps = 0
 
@@ -115,6 +118,7 @@ with tf.Session() as sess:
     for i in range(num_episodes):
         episodeBuffer = experience_buffer()
         s = env.reset()
+        #  obs = env.reset()
         s = processState(s)
         d = False
         rAll = 0
@@ -148,7 +152,7 @@ with tf.Session() as sess:
             if d == True:
                 break
         myBuffer.add(episodeBuffer.buffer)
-        jList.append(j)
+        #  jList.append(j)
         rList.append(rAll)
         if i % 1000 == 0:
             saver.save(sess, path + '/model-' + str(i) + '.ckpt')
@@ -157,3 +161,7 @@ with tf.Session() as sess:
             print(total_steps, np.mean(rList[-10:]), e)
     saver.save(sess, path + '/model-' + str(i) + '.ckpt')
 print('Percent of successful episodes: ' + str(sum(rList)/num_episodes) + "%")
+
+rMat = np.resize(np.array(rList),[len(rList)//100,100])
+rMean = np.average(rMat,1)
+plt.plot(rMean)

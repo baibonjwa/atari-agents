@@ -14,7 +14,7 @@ class gameOb():
         self.channel = channel
         self.reward = reward
         self.name = name
-        
+
 class gameEnv():
     def __init__(self,partial,size):
         self.sizeX = size
@@ -24,8 +24,7 @@ class gameEnv():
         self.partial = partial
         a = self.reset()
         plt.imshow(a,interpolation="nearest")
-        
-        
+
     def reset(self):
         self.objects = []
         hero = gameOb(self.newPosition(),1,1,2,None,'hero')
@@ -59,12 +58,12 @@ class gameEnv():
         if direction == 2 and hero.x >= 1:
             hero.x -= 1
         if direction == 3 and hero.x <= self.sizeX-2:
-            hero.x += 1     
+            hero.x += 1
         if hero.x == heroX and hero.y == heroY:
             penalize = 0.0
         self.objects[0] = hero
         return penalize
-    
+
     def newPosition(self):
         iterables = [ range(self.sizeX), range(self.sizeY)]
         points = []

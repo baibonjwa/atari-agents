@@ -105,6 +105,7 @@ venv.bak/
 
 random_agent_results/
 dqn/
+*/**/.DS_Store
 .DS_Store
 *.gz
 */**/log

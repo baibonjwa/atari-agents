@@ -16,7 +16,11 @@ AVAILABLE_AGENT_LIST = [
     'RandomAgent',
     'TabularQAgent',
     'QTableLearningAgent',
+    'DoubleDuelingDQNAgent',
 ]
+
+def processState(states):
+    return np.reshape(states, [21168])
 
 def main():
     """This is main function"""
@@ -49,11 +53,14 @@ def main():
     env.seed(0)
 
     agent = agent_klass(env)
-    episode_count = 100
+    episode_count = 10000
     episode_rewards = []
     rewards = []
     reward = 0
     done = False
+    # this only for double_dueling_dqn_agent
+    #  episodeBuffer = experience_buffer()
+    #  s = processState(s)
 
     for i in range(episode_count):
         obs = env.reset()
