@@ -17,10 +17,7 @@ class Qnetwork():
         self.imageIn = tf.reshape(self.scalarInput, shape=[-1, 210, 160, 3])
         self.conv1 = slim.conv2d(
             inputs=self.imageIn,
-            #  num_outputs=32,
-            #  kernel_size=8,
-            #  stride=4,
-            num_outputs=16,
+            num_outputs=32,
             kernel_size=8,
             stride=4,
             padding='VALID',
@@ -28,40 +25,42 @@ class Qnetwork():
         )
         self.conv2 = slim.conv2d(
             inputs=self.conv1,
-            #  num_outputs=64,
-            #  kernel_size=4,
-            #  stride=2,
-            num_outputs=32,
-            kernel_size=8,
-            stride=3,
-            padding='VALID',
-            biases_initializer=None
-        )
-        self.conv3 = slim.conv2d(
-            inputs=self.conv2,
-            #  num_outputs=64,
-            #  kernel_size=3,
-            #  stride=1,
-            num_outputs=16,
+            num_outputs=64,
             kernel_size=4,
             stride=2,
             padding='VALID',
             biases_initializer=None
         )
+        self.conv3 = slim.conv2d(
+            inputs=self.conv2,
+            num_outputs=64,
+            kernel_size=4,
+            stride=1,
+            padding='VALID',
+            biases_initializer=None
+        )
         self.conv4 = slim.conv2d(
             inputs=self.conv3,
-            num_outputs=h_size,
+            num_outputs=64,
+            kernel_size=4,
+            stride=3,
+            padding='VALID',
+            biases_initializer=None
+        )
+        self.conv5 = slim.conv2d(
+            inputs=self.conv4,
+            num_outputs=64,
             kernel_size=4,
             stride=3,
             padding='VALID',
             biases_initializer=None
         )
 
-        #  self.fc = slim.fully_connected(
-            #  self.conv4,
-            #  num_outputs=h_size,
-            #  activation_fn=tf.tanh,
-        #  )
+        self.fc = slim.fully_connected(
+            self.conv5,
+            num_outputs=h_size,
+            activation_fn=tf.tanh,
+        )
 
         #  self.conv4 = slim.conv2d(
             #  inputs=self.conv3,
@@ -73,8 +72,8 @@ class Qnetwork():
         #  )
 
         # Dueling network
-        self.streamAC, self.streamVC = tf.split(self.conv4, 2, 3)
-        #  self.streamAC, self.streamVC = tf.split(self.fc, 2, 3)
+        #  self.streamAC, self.streamVC = tf.split(self.conv4, 2, 3)
+        self.streamAC, self.streamVC = tf.split(self.fc, 2, 3)
         self.streamA = slim.flatten(self.streamAC)
         self.streamV = slim.flatten(self.streamVC)
         xavier_init = tf.contrib.layers.xavier_initializer()
