@@ -23,8 +23,7 @@ This implementation contains:
 - Python 2.7 or Python 3.3+
 - [gym](https://github.com/openai/gym)
 - [tqdm](https://github.com/tqdm/tqdm)
-- [SciPy](http://www.scipy.org/install.html) or
-  [OpenCV2](http://opencv.org/)
+- [SciPy](http://www.scipy.org/install.html) or [OpenCV2](http://opencv.org/)
 - [TensorFlow](https://github.com/tensorflow/tensorflow)
 
 

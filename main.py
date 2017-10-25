@@ -13,13 +13,31 @@ import matplotlib.pyplot as plt
 from inflection import underscore
 
 import gym
+from tqdm import tqdm
 from gym import wrappers
+
+flags = tf.app.flags
+
+# DQN
+#  flags.DEFINE_boolean('dueling', False, 'Whether to use dueling deep q-network')
+#  flags.DEFINE_boolean('double_q', False, 'Whether to use double q-learning')
+
+flags.DEFINE_string('env_name', 'Breakout-v0', 'The name of gym environment to use')
+#  flags.DEFINE_integer('action_repeat', 4, 'The number of action to be repeated')
+flags.DEFINE_string('agent_name', 'DoubleDuelingDQNAgent', 'THe name of agent to use')
+flags.DEFINE_boolean('is_train', True, 'Whether to do training or testing')
+flags.DEFINE_integer('random_seed', 123, 'Value of random seed')
+
+FLAGS = flags.FLAGS
+
+tf.set_random_seed(FLAGS.random_seed)
+random.seed(FLAGS.random_seed)
 
 AVAILABLE_AGENT_LIST = [
     'RandomAgent',
-    'TabularQAgent',
-    'QTableLearningAgent',
     'DoubleDuelingDQNAgent',
+    'A3cFfAgent',
+    'A3cLstmAgent',
 ]
 
 class experience_buffer():
@@ -40,21 +58,6 @@ def processState(states):
 
 def main():
     """This is main function"""
-    parser = argparse.ArgumentParser(description=None)
-    parser.add_argument(
-        'env_id',
-        nargs='?',
-        default="MsPacmanDeterministic-v0",
-        help='Select the environment to run',
-    )
-    # parser.add_argument('agent', nargs='?', default="RandomAgent", help='Select the Agent to run')
-    parser.add_argument(
-        'agent',
-        nargs='?',
-        default="DoubleDuelingDQNAgent",
-        help='Select the Agent to run'
-    )
-    args = parser.parse_args()
 
     gym.undo_logger_setup()
     logger = logging.getLogger()
@@ -65,12 +68,12 @@ def main():
 
     logger.setLevel(logging.INFO)
 
-    env = gym.make(args.env_id)
+    env = gym.make(FLAGS.env_name)
 
-    agent_module = importlib.import_module(underscore('agents.' + args.agent))
-    agent_klass = getattr(agent_module, args.agent)
+    agent_module = importlib.import_module(underscore('agents.' + FLAGS.agent_name))
+    agent_klass = getattr(agent_module, FLAGS.agent_name)
 
-    outdir = './random_agent_results/' + args.env_id + '/' + str(agent_klass.__name__) + '/'
+    outdir = './results/' + FLAGS.env_name + '/' + str(agent_klass.__name__) + '/'
     env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
 
@@ -87,7 +90,7 @@ def main():
         #  episodeBuffer = experience_buffer()
         #  s = processState(s)
 
-        for i in range(episode_count):
+        for i in tqdm(range(episode_count)):
             episodeBuffer = experience_buffer()
             obs = env.reset()
             state = processState(obs)

@@ -109,3 +109,4 @@ dqn/
 .DS_Store
 *.gz
 */**/log
+results/
