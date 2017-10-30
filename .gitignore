@@ -110,3 +110,4 @@ dqn/
 *.gz
 */**/log
 results/
+log/

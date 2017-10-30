@@ -98,13 +98,28 @@ class Qnetwork():
         self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
         self.updateModel = self.trainer.minimize(self.loss)
 
+        #  tf.summary.scalar('loss', self.loss)
+        #  self.variable_summaries(self.loss)
+
+    def variable_summaries(self, var):
+      """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+      with tf.name_scope('summaries'):
+        mean = tf.reduce_mean(var)
+        tf.summary.scalar('mean', mean)
+        with tf.name_scope('stddev'):
+          stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+        tf.summary.scalar('stddev', stddev)
+        tf.summary.scalar('max', tf.reduce_max(var))
+        tf.summary.scalar('min', tf.reduce_min(var))
+        tf.summary.histogram('histogram', var)
+
 class experience_buffer():
     def __init__(self, buffer_size=50000):
         self.buffer = []
         self.buffer_size = buffer_size
 
     def add(self, experience):
-        pdb.set_trace()
+        #  pdb.set_trace()
         if len(self.buffer) + len(experience) >= self.buffer_size:
             self.buffer[0:(len(experience) + len(self.buffer)) -  self.buffer_size] = []
         self.buffer.extend(experience)
@@ -114,7 +129,7 @@ class experience_buffer():
 
 
 class DoubleDuelingDQNAgent(object):
-    def __init__(self, env, sess):
+    def __init__(self, env, sess, FLAGS):
         self.action_space = env.action_space
 
         self.config = {
@@ -162,6 +177,18 @@ class DoubleDuelingDQNAgent(object):
         if not os.path.exists(self.config["path"]):
             os.makedirs(self.config["path"])
 
+        #  self.variable_summaries(self.rList)
+        #  self.variable_summaries(self.loss)
+        #  self.variable_summaries(self.e)
+
+        self.merged = tf.summary.merge_all()
+
+        log_path = "%s/%s/%s/%s" % (FLAGS.log_dir, FLAGS.env_name, str(self.__class__.__name__), FLAGS.timestamp)
+        #  log_path = "%s/%s/%s" % (FLAGS.log_dir, FLAGS.env_name, str(self.__class__.__name__))
+        print("Log directory path: %s" % log_path)
+        #  self.writer = writer
+        self.writer = tf.summary.FileWriter("%s/%s" % (log_path, '/train'), sess.graph)
+
     def learn(self, state, action, reward, done, episodeBuffer, myBuffer):
         s1 = self.processState(state)
         self.total_steps += 1
@@ -178,10 +205,12 @@ class DoubleDuelingDQNAgent(object):
                 end_multiplier = -(trainBatch[:, 4] - 1)
                 doubleQ = Q2[range(self.config["batch_size"]), Q1]
                 targetQ = trainBatch[:, 2] + (self.config["y"] * doubleQ * end_multiplier)
+                #  pdb.set_trace()
                 _, loss = self.sess.run([self.mainQN.updateModel, self.mainQN.loss], feed_dict={ self.mainQN.scalarInput:np.vstack(trainBatch[:, 0]), self.mainQN.targetQ:targetQ, self.mainQN.actions:trainBatch[:, 1] })
                 self.loss = loss
-                #  pdb.set_trace()
                 self.updateTarget(self.targetOps, self.sess)
+                #  summary = self.sess.run([self.merged], feed_dict={ self.mainQN.scalarInput:np.vstack(trainBatch[:, 0]), self.mainQN.targetQ:targetQ, self.mainQN.actions:trainBatch[:, 1] })
+                #  self.train_writer.add_summary(summary, self.total_steps)
         return s1, self.loss, self.e
 
     def reset(self):
@@ -207,4 +236,3 @@ class DoubleDuelingDQNAgent(object):
     def updateTarget(self, op_holder, sess):
         for op in op_holder:
             sess.run(op)
-
