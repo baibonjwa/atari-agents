@@ -58,17 +58,14 @@ class experience_buffer():
     def sample(self, size):
         return np.reshape(np.array(random.sample(self.buffer, size)), [size, 5])
 
-def variable_summaries(var):
-  """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+def variable_summaries(var, name):
   with tf.name_scope('summaries'):
     mean = tf.reduce_mean(var)
-    tf.summary.scalar('mean', mean)
-    with tf.name_scope('stddev'):
-      stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-    tf.summary.scalar('stddev', stddev)
-    tf.summary.scalar('max', tf.reduce_max(var))
-    tf.summary.scalar('min', tf.reduce_min(var))
-    tf.summary.histogram('histogram', var)
+    tf.summary.scalar('%s.avg' % (name), mean)
+    tf.summary.scalar('%s.stddev' % (name), tf.sqrt(tf.reduce_mean(tf.square(var - mean))))
+    tf.summary.scalar('%s.max' % (name), tf.reduce_max(var))
+    tf.summary.scalar('%s.min' % (name), tf.reduce_min(var))
+    tf.summary.histogram('%s.histogram' % (name), var)
 
 def processState(states):
     return np.reshape(states, [states.size])
@@ -111,7 +108,7 @@ def main():
         rewards = []
 
         r = tf.placeholder(shape=[None], dtype=tf.float32)
-        variable_summaries(r)
+        variable_summaries(r, 'reward')
 
         #  reward = 0
         #  done = False
@@ -134,8 +131,6 @@ def main():
                 if done:
                     episode_rewards_sum = np.sum(episode_rewards)
                     rewards.append(episode_rewards_sum)
-                    print("episode: {0}, reward: {1}, loss: {2}, e: {3}".format(
-                        i, np.sum(episode_rewards_sum), loss, e))
                     episode_rewards = []
                     break
             myBuffer.add(episodeBuffer.buffer)
