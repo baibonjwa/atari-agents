@@ -12,6 +12,7 @@ import sys
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from agents.utils import variable_summaries, rgb2gray
 
 from inflection import underscore
 
@@ -57,15 +58,6 @@ class experience_buffer():
 
     def sample(self, size):
         return np.reshape(np.array(random.sample(self.buffer, size)), [size, 5])
-
-def variable_summaries(var, name):
-  with tf.name_scope('summaries'):
-    mean = tf.reduce_mean(var)
-    tf.summary.scalar('%s.avg' % (name), mean)
-    tf.summary.scalar('%s.stddev' % (name), tf.sqrt(tf.reduce_mean(tf.square(var - mean))))
-    tf.summary.scalar('%s.max' % (name), tf.reduce_max(var))
-    tf.summary.scalar('%s.min' % (name), tf.reduce_min(var))
-    tf.summary.histogram('%s.histogram' % (name), var)
 
 def processState(states):
     return np.reshape(states, [states.size])
@@ -119,12 +111,14 @@ def main():
         for i in tqdm(range(episode_count)):
             episodeBuffer = experience_buffer()
             obs = env.reset()
+            obs = rgb2gray(obs)
             state = processState(obs)
             reward = 0
             done = False
             for j in range(max_episode_length):
                 action = agent.act(state, reward, done)
                 obs, reward, done, _ = env.step(action)
+                obs = rgb2gray(obs)
                 s1, loss, e = agent.learn(state, reward, action, done, episodeBuffer, myBuffer)
                 state = s1
                 episode_rewards.append(reward)

@@ -8,18 +8,17 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import matplotlib.pyplot as plt
-import scipy.misc
+from .utils import rgb2gray
 
 class Qnetwork():
-    def __init__(self, h_size, env):
-        #  pdb.set_trace()
-        self.scalarInput = tf.placeholder(shape=[None, 100800], dtype=tf.float32)
-        self.imageIn = tf.reshape(self.scalarInput, shape=[-1, 210, 160, 3])
+    def __init__(self, h_size, action_space):
+        self.scalarInput = tf.placeholder(shape=[None, 33600], dtype=tf.float32)
+        self.imageIn = tf.reshape(self.scalarInput, shape=[-1, 210, 160])
         self.conv1 = slim.conv2d(
             inputs=self.imageIn,
             num_outputs=32,
             kernel_size=8,
-            stride=4,
+            stride=7,
             padding='VALID',
             biases_initializer=None
         )
@@ -27,40 +26,34 @@ class Qnetwork():
             inputs=self.conv1,
             num_outputs=64,
             kernel_size=4,
-            stride=2,
+            stride=3,
             padding='VALID',
             biases_initializer=None
         )
         self.conv3 = slim.conv2d(
             inputs=self.conv2,
             num_outputs=64,
-            kernel_size=4,
-            stride=1,
-            padding='VALID',
-            biases_initializer=None
-        )
-        self.conv4 = slim.conv2d(
-            inputs=self.conv3,
-            num_outputs=64,
-            kernel_size=4,
-            stride=3,
-            padding='VALID',
-            biases_initializer=None
-        )
-        self.conv5 = slim.conv2d(
-            inputs=self.conv4,
-            num_outputs=64,
-            kernel_size=4,
-            stride=3,
+            kernel_size=3,
+            stride=2,
             padding='VALID',
             biases_initializer=None
         )
 
-        self.fc = slim.fully_connected(
-            self.conv5,
-            num_outputs=h_size,
-            activation_fn=tf.tanh,
-        )
+        #  self.conv4 = slim.conv2d(
+            #  inputs=self.conv3,
+            #  num_outputs=64,
+            #  kernel_size=7,
+            #  stride=1,
+            #  padding='VALID',
+            #  biases_initializer=None
+        #  )
+
+
+        #  self.fc = slim.fully_connected(
+            #  self.conv3,
+            #  num_outputs=23,
+            #  activation_fn=tf.tanh,
+        #  )
 
         #  self.conv4 = slim.conv2d(
             #  inputs=self.conv3,
@@ -73,23 +66,24 @@ class Qnetwork():
 
         # Dueling network
         #  self.streamAC, self.streamVC = tf.split(self.conv4, 2, 3)
-        self.streamAC, self.streamVC = tf.split(self.fc, 2, 3)
+        #  pdb.set_trace()
+        self.streamAC, self.streamVC = tf.split(self.conv3, 2)
         self.streamA = slim.flatten(self.streamAC)
         self.streamV = slim.flatten(self.streamVC)
         xavier_init = tf.contrib.layers.xavier_initializer()
-        self.AW = tf.Variable(xavier_init([h_size//2, env.action_space.n]))
+        self.AW = tf.Variable(xavier_init([h_size//2, action_space]))
         self.VW = tf.Variable(xavier_init([h_size//2, 1]))
-        #  pdb.set_trace()
         self.Advantage = tf.matmul(self.streamA, self.AW)
         self.Value = tf.matmul(self.streamV, self.AW)
 
         # ?
+        pdb.set_trace()
         self.Qout = self.Value + tf.subtract(self.Advantage, tf.reduce_mean(self.Advantage, axis=1, keep_dims=True))
         self.predict = tf.argmax(self.Qout, 1)
 
         self.targetQ = tf.placeholder(shape=[None], dtype=tf.float32)
         self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
-        self.actions_onehot = tf.one_hot(self.actions, env.action_space.n, dtype=tf.float32)
+        self.actions_onehot = tf.one_hot(self.actions, action_space, dtype=tf.float32)
 
         self.Q = tf.reduce_sum(tf.multiply(self.Qout, self.actions_onehot), axis=1)
 
@@ -98,28 +92,12 @@ class Qnetwork():
         self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
         self.updateModel = self.trainer.minimize(self.loss)
 
-        #  tf.summary.scalar('loss', self.loss)
-        #  self.variable_summaries(self.loss)
-
-    def variable_summaries(self, var):
-      """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-      with tf.name_scope('summaries'):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
-        with tf.name_scope('stddev'):
-          stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-        tf.summary.scalar('stddev', stddev)
-        tf.summary.scalar('max', tf.reduce_max(var))
-        tf.summary.scalar('min', tf.reduce_min(var))
-        tf.summary.histogram('histogram', var)
-
 class experience_buffer():
     def __init__(self, buffer_size=50000):
         self.buffer = []
         self.buffer_size = buffer_size
 
     def add(self, experience):
-        #  pdb.set_trace()
         if len(self.buffer) + len(experience) >= self.buffer_size:
             self.buffer[0:(len(experience) + len(self.buffer)) -  self.buffer_size] = []
         self.buffer.extend(experience)
@@ -130,10 +108,13 @@ class experience_buffer():
 
 class DoubleDuelingDQNAgent(object):
     def __init__(self, env, sess, FLAGS):
+
+        self.env = env
         self.action_space = env.action_space
 
         self.config = {
             "batch_size": 32,
+            #  "batch_size": 8,
             "update_freq": 4,
             "y": .99,
             "startE": 1,
@@ -150,8 +131,8 @@ class DoubleDuelingDQNAgent(object):
 
         #  tf.reset_default_graph()
 
-        self.mainQN = Qnetwork(self.config["h_size"], env)
-        self.targetQN = Qnetwork(self.config["h_size"], env)
+        self.mainQN = Qnetwork(self.config["h_size"], env.action_space.n)
+        self.targetQN = Qnetwork(self.config["h_size"], env.action_space.n)
 
         init = tf.global_variables_initializer()
 
@@ -177,16 +158,9 @@ class DoubleDuelingDQNAgent(object):
         if not os.path.exists(self.config["path"]):
             os.makedirs(self.config["path"])
 
-        #  self.variable_summaries(self.rList)
-        #  self.variable_summaries(self.loss)
-        #  self.variable_summaries(self.e)
-
         self.merged = tf.summary.merge_all()
 
         log_path = "%s/%s/%s/%s" % (FLAGS.log_dir, FLAGS.env_name, str(self.__class__.__name__), FLAGS.timestamp)
-        #  log_path = "%s/%s/%s" % (FLAGS.log_dir, FLAGS.env_name, str(self.__class__.__name__))
-        print("Log directory path: %s" % log_path)
-        #  self.writer = writer
         self.writer = tf.summary.FileWriter("%s/%s" % (log_path, '/train'), sess.graph)
 
     def learn(self, state, action, reward, done, episodeBuffer, myBuffer):
