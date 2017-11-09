@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 import _pickle as cPickle
-from scipy.misc import imresize
 
 # https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
 def rgb2gray(image):

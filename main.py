@@ -13,8 +13,10 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from agents.utils import variable_summaries, rgb2gray
+from scipy.misc import imresize
 
 from inflection import underscore
+from tensorflow.python import debug as tf_debug
 
 import gym
 from tqdm import tqdm
@@ -60,6 +62,7 @@ class experience_buffer():
         return np.reshape(np.array(random.sample(self.buffer, size)), [size, 5])
 
 def processState(states):
+    #  pdb.set_trace()
     return np.reshape(states, [states.size])
 
 def main():
@@ -77,7 +80,7 @@ def main():
     env = gym.make(FLAGS.env_name)
 
     with tf.Session() as sess:
-
+        #  sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         agent_module = importlib.import_module(underscore('agents.' + FLAGS.agent_name))
         agent_klass = getattr(agent_module, FLAGS.agent_name)
         agent = agent_klass(env, sess, FLAGS)
@@ -93,8 +96,9 @@ def main():
         env.seed(0)
 
         agent = agent_klass(env, sess, FLAGS)
-        episode_count = 10000
-        max_episode_length = 10000
+        total_steps = agent.config["total_steps"]
+        episode_count = agent.config["num_episodes"]
+        max_episode_length = agent.config["max_epLength"]
         episode_rewards = []
         myBuffer = experience_buffer()
         rewards = []
@@ -108,30 +112,60 @@ def main():
         #  episodeBuffer = experience_buffer()
         #  s = processState(s)
 
-        for i in tqdm(range(episode_count)):
-            episodeBuffer = experience_buffer()
-            obs = env.reset()
-            obs = rgb2gray(obs)
-            state = processState(obs)
-            reward = 0
-            done = False
-            for j in range(max_episode_length):
-                action = agent.act(state, reward, done)
-                obs, reward, done, _ = env.step(action)
-                obs = rgb2gray(obs)
-                s1, loss, e = agent.learn(state, reward, action, done, episodeBuffer, myBuffer)
-                state = s1
-                episode_rewards.append(reward)
-                if done:
-                    episode_rewards_sum = np.sum(episode_rewards)
-                    rewards.append(episode_rewards_sum)
-                    episode_rewards = []
-                    break
-            myBuffer.add(episodeBuffer.buffer)
+        #  for i in tqdm(range(episode_count)):
+            #  episodeBuffer = experience_buffer()
+            #  obs = env.reset()
+            #  obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
+            #  state = processState(obs)
+            #  reward = 0
+            #  done = False
+            #  for j in range(max_episode_length):
+                #  action = agent.act(state, reward, done)
+                #  obs, reward, done, _ = env.step(action)
+                #  obs = rgb2gray(obs)
+                #  s1, loss, e = agent.learn(state, reward, action, done, episodeBuffer, myBuffer)
+                #  state = s1
+                #  episode_rewards.append(reward)
+                #  if done:
+                    #  episode_rewards_sum = np.sum(episode_rewards)
+                    #  rewards.append(episode_rewards_sum)
+                    #  episode_rewards = []
+                    #  break
+            #  myBuffer.add(episodeBuffer.buffer)
 
-            merged = tf.summary.merge_all()
-            summary = sess.run(merged, feed_dict={r: rewards})
-            agent.writer.add_summary(summary, i)
+            #  merged = tf.summary.merge_all()
+            #  summary = sess.run(merged, feed_dict={r: rewards})
+            #  agent.writer.add_summary(summary, i)
+
+        reward = 0
+        done = False
+        episode_num = 0
+
+        episodeBuffer = experience_buffer()
+        obs = env.reset()
+        obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
+        state = processState(obs)
+
+        #  for i in tqdm(range(episode_count)):
+        for i in tqdm(range(total_steps)):
+            action = agent.act(state, reward, done)
+            obs, reward, done, _ = env.step(action)
+            s1, loss, e = agent.learn(state, reward, action, done, episodeBuffer, myBuffer)
+            state = s1
+            episode_rewards.append(reward)
+            if done:
+                episode_num += 1
+                episode_rewards_sum = np.sum(episode_rewards)
+                rewards.append(episode_rewards_sum)
+                episode_rewards = []
+                myBuffer.add(episodeBuffer.buffer)
+                obs = env.reset()
+                obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
+                state = processState(obs)
+
+                merged = tf.summary.merge_all()
+                summary = sess.run(merged, feed_dict={r: rewards})
+                agent.writer.add_summary(summary, episode_num)
 
     env.close()
 
