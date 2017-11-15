@@ -58,8 +58,24 @@ class experience_buffer():
             self.buffer[0:(len(experience) + len(self.buffer)) -  self.buffer_size] = []
         self.buffer.extend(experience)
 
+    def getState(self, index):
+        index = random.randint(4, self.buffer_size)
+        samples = self.buffer[(index - 4):index]
+        return np.reshape(np.array([ np.reshape(x.tolist(), (84, 84)) for x in np.array(samples)[:, 0] ]), (84, 84, 4))
+
+
     def sample(self, size):
-        return np.reshape(np.array(random.sample(self.buffer, size)), [size, 5])
+        results = []
+        for i in range(size):
+            index = random.randint(4, self.buffer_size)
+            sample = self.buffer[index] 
+            preStates = self.getState(index - 1)
+            postStates = self.getState(index)
+            results.append([preStates, sample[1], sample[2], postStates, sample[4]])
+        results = np.array(results)
+        # pdb.set_trace()
+        return results
+        # return np.reshape(np.array(), [size, 5])
 
 def processState(states):
     #  pdb.set_trace()
@@ -95,7 +111,6 @@ def main():
         env = wrappers.Monitor(env, directory=outdir, force=True)
         env.seed(0)
 
-        agent = agent_klass(env, sess, FLAGS)
         total_steps = agent.config["total_steps"]
         episode_count = agent.config["num_episodes"]
         max_episode_length = agent.config["max_epLength"]

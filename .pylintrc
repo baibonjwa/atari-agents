@@ -23,4 +23,6 @@ contextmanager-decorators=contextlib.contextmanager,tensorflow.python.util.tf_co
 # R0915 Too many statements
 # R0913 Too many arguments
 # R0904 Too many public methods
-disable=C0103,C0111,I0011,I0012,W0704,W0142,W0212,W0232,W0613,W0702,R0201,W0614,R0914,R0912,R0915,R0913,R0904,R0801
+# R0903 Too few public methods
+# R0902 Too many public methods
+disable=C0103,C0111,I0011,I0012,W0704,W0142,W0212,W0232,W0613,W0702,R0201,W0614,R0914,R0912,R0915,R0913,R0904,R0801,R0903,R0902
