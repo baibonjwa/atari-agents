@@ -10,6 +10,7 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from agents.utils import variable_summaries, rgb2gray
+from agents.history import History
 from scipy.misc import imresize
 
 from inflection import underscore
@@ -45,39 +46,6 @@ AVAILABLE_AGENT_LIST = [
         'A3cLstmAgent',
         ]
 
-class experience_buffer():
-    def __init__(self, buffer_size=50000):
-        self.buffer = []
-        self.buffer_size = buffer_size
-
-    def add(self, experience):
-        if len(self.buffer) + len(experience) >= self.buffer_size:
-            self.buffer[0:(len(experience) + len(self.buffer)) -  self.buffer_size] = []
-        self.buffer.extend(experience)
-
-    def getState(self, index):
-        index = random.randint(4, self.buffer_size)
-        samples = self.buffer[(index - 4):index]
-        return np.reshape(np.array([ np.reshape(x.tolist(), (84, 84)) for x in np.array(samples)[:, 0] ]), (84, 84, 4))
-
-
-    def sample(self, size):
-        results = []
-        for i in range(size):
-            index = random.randint(4, self.buffer_size - 1)
-            sample = self.buffer[index] 
-            preStates = self.getState(index - 1)
-            postStates = self.getState(index)
-            results.append([preStates, sample[1], sample[2], postStates, sample[4]])
-        results = np.array(results)
-        # pdb.set_trace()
-        return results
-        # return np.reshape(np.array(), [size, 5])
-
-def processState(states):
-    #  pdb.set_trace()
-    return np.reshape(states, [states.size])
-
 def main():
     """This is main function"""
 
@@ -112,57 +80,28 @@ def main():
         episode_count = agent.config["num_episodes"]
         max_episode_length = agent.config["max_epLength"]
         episode_rewards = []
-        myBuffer = experience_buffer()
+        myBuffer = History()
         rewards = []
 
         r = tf.placeholder(shape=[None], dtype=tf.float32)
+        r_l_100 = r[-100:]
         variable_summaries(r, 'reward')
-
-        #  reward = 0
-        #  done = False
-        # this only for double_dueling_dqn_agent
-        #  episodeBuffer = experience_buffer()
-        #  s = processState(s)
-
-        #  for i in tqdm(range(episode_count)):
-            #  episodeBuffer = experience_buffer()
-            #  obs = env.reset()
-            #  obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
-            #  state = processState(obs)
-            #  reward = 0
-            #  done = False
-            #  for j in range(max_episode_length):
-                #  action = agent.act(state, reward, done)
-                #  obs, reward, done, _ = env.step(action)
-                #  obs = rgb2gray(obs)
-                #  s1, loss, e = agent.learn(state, reward, action, done, episodeBuffer, myBuffer)
-                #  state = s1
-                #  episode_rewards.append(reward)
-                #  if done:
-                    #  episode_rewards_sum = np.sum(episode_rewards)
-                    #  rewards.append(episode_rewards_sum)
-                    #  episode_rewards = []
-                    #  break
-            #  myBuffer.add(episodeBuffer.buffer)
-
-            #  merged = tf.summary.merge_all()
-            #  summary = sess.run(merged, feed_dict={r: rewards})
-            #  agent.writer.add_summary(summary, i)
+        variable_summaries(r_l_100, 'reward_l_100')
 
         reward = 0
         done = False
         episode_num = 0
 
-        episodeBuffer = experience_buffer()
+        history = History()
         obs = env.reset()
         obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
-        state = processState(obs)
+        state = obs
 
         #  for i in tqdm(range(episode_count)):
         for i in tqdm(range(total_steps)):
             action = agent.act(state, reward, done)
             obs, reward, done, _ = env.step(action)
-            s1, loss, e = agent.learn(state, reward, action, done, episodeBuffer, myBuffer)
+            s1, loss, e = agent.learn(state, reward, action, done, history, myBuffer)
             state = s1
             episode_rewards.append(reward)
             if done:
@@ -170,10 +109,10 @@ def main():
                 episode_rewards_sum = np.sum(episode_rewards)
                 rewards.append(episode_rewards_sum)
                 episode_rewards = []
-                myBuffer.add(episodeBuffer.buffer)
+                myBuffer.add(history.buffer)
                 obs = env.reset()
                 obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
-                state = processState(obs)
+                state = obs
 
                 merged = tf.summary.merge_all()
                 summary = sess.run(merged, feed_dict={r: rewards})

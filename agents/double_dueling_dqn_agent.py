@@ -54,22 +54,6 @@ class Qnetwork():
         self.Advantage, self.w['adv_w_out'], self.w['adv_w_b'] = \
           linear(self.adv_hid, action_space, name=name + 'adv_out')
 
-        #  self.conv4 = slim.conv2d(self.conv3, 64, 5, 2, 'VALID',
-        #                           biases_initializer=None, scope="conv4")
-        #  self.fc = slim.fully_connected(self.conv4, h_size, activation_fn=tf.tanh)
-        # Dueling network
-        #  self.streamAC, self.streamVC = tf.split(self.conv4, 2, 3)
-        #  pdb.set_trace()
-        #  self.streamAC, self.streamVC = tf.split(self.fc, 2, 3)
-        #  self.streamA = slim.flatten(self.streamAC)
-        #  self.streamV = slim.flatten(self.streamVC)
-        #  xavier_init = tf.contrib.layers.xavier_initializer()
-        #  self.AW = tf.Variable(xavier_init([h_size//2, action_space]))
-        #  self.AW = tf.Variable(xavier_init([h_size//2, 1]))
-        #  self.VW = tf.Variable(xavier_init([h_size//2, 1]))
-        #  self.Advantage = tf.matmul(self.streamA, self.AW)
-        #  self.Value = tf.matmul(self.streamV, self.AW)
-        # ?
         self.Qout = self.Value + tf.subtract(
             self.Advantage, tf.reduce_mean(self.Advantage, axis=1, keep_dims=True))
         self.predict = tf.argmax(self.Qout, 1)
@@ -85,32 +69,6 @@ class Qnetwork():
         self.loss = tf.reduce_mean(self.td_error)
         self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
         self.updateModel = self.trainer.minimize(self.loss)
-
-class experience_buffer():
-    def __init__(self, buffer_size=50000):
-        self.buffer = []
-        self.buffer_size = buffer_size
-
-    def add(self, experience):
-        if len(self.buffer) + len(experience) >= self.buffer_size:
-            self.buffer[0:(len(experience) + len(self.buffer)) -  self.buffer_size] = []
-        self.buffer.extend(experience)
-
-    def getState(self, index):
-        index = random.randint(4, self.buffer_size)
-        samples = self.buffer[(index - 4):index]
-        return np.reshape(np.array([ np.reshape(x.tolist(), (84, 84)) for x in np.array(samples)[:, 0] ]), (84, 84, 4))
-
-    def sample(self, size):
-        results = []
-        for i in range(size):
-            index = random.randint(4, self.buffer_size)
-            sample = self.buffer[index] 
-            preStates = self.getState(index - 1)
-            postStates = self.getState(index)
-            results.append([preStates, sample[1], sample[2], postStates, sample[4]])
-        results = np.array(results)
-        return results
 
 class DoubleDuelingDQNAgent(object):
     def __init__(self, env, sess, FLAGS):
@@ -179,7 +137,7 @@ class DoubleDuelingDQNAgent(object):
         self.writer = tf.summary.FileWriter("%s/%s" % (log_path, '/train'), sess.graph)
 
     def learn(self, state, action, reward, done, episodeBuffer, myBuffer):
-        s1 = self.processState(state)
+        s1 = state
         self.total_steps += 1
         episodeBuffer.add(np.reshape(np.array([state, action, reward, s1, done]), [1, 5]))
 
@@ -217,9 +175,6 @@ class DoubleDuelingDQNAgent(object):
         else:
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
         return a
-
-    def processState(self, states):
-        return np.reshape(states, [states.size])
 
     def updateTargetGraph(self, tfVars, tau):
         total_vars = len(tfVars)
