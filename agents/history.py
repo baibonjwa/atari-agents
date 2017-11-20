@@ -13,7 +13,7 @@ class History():
         self.buffer.extend(experience)
 
     def getState(self, index):
-        index = random.randint(4, self.buffer_size)
+        index = random.randint(4, self.buffer_size - 1)
         samples = self.buffer[(index - 4):index]
         return np.reshape(np.array([ np.reshape(x.tolist(), (84, 84)) for x in np.array(samples)[:, 0] ]), (84, 84, 4))
 
