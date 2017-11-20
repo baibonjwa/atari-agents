@@ -83,10 +83,16 @@ def main():
         myBuffer = History()
         rewards = []
 
-        r = tf.placeholder(shape=[None], dtype=tf.float32)
-        r_l_100 = r[-100:]
-        variable_summaries(r, 'reward')
-        variable_summaries(r_l_100, 'reward_l_100')
+        e_tf = tf.placeholder(shape=[None], dtype=tf.float32)
+        loss_tf = tf.placeholder(shape=[None], dtype=tf.float32) 
+        r_tf = tf.placeholder(shape=[None], dtype=tf.float32)
+
+        e_list = []
+        loss_list = []
+
+        variable_summaries(e_tf, 'e')
+        variable_summaries(loss_tf, 'loss')
+        variable_summaries(r_tf, 'reward')
 
         reward = 0
         done = False
@@ -102,6 +108,8 @@ def main():
             action = agent.act(state, reward, done)
             obs, reward, done, _ = env.step(action)
             s1, loss, e = agent.learn(state, reward, action, done, history, myBuffer)
+            e_list.append(e)
+            loss_list.append(loss)
             state = s1
             episode_rewards.append(reward)
             if done:
@@ -115,7 +123,11 @@ def main():
                 state = obs
 
                 merged = tf.summary.merge_all()
-                summary = sess.run(merged, feed_dict={r: rewards})
+                summary = sess.run(merged, feed_dict={
+                    r_tf: rewards,
+                    e_tf: e_list,
+                    loss_tf: loss_list,
+                })
                 agent.writer.add_summary(summary, episode_num)
 
     env.close()

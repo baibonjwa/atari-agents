@@ -8,6 +8,7 @@ import functools
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim # pylint: disable=E0611
+from .utils import variable_summaries
 
 def linear(input_, output_size, stddev=0.02, bias_start=0.0, activation_fn=None, name='linear'):
     shape = input_.get_shape().as_list()
@@ -29,7 +30,6 @@ class Qnetwork():
     def __init__(self, h_size, action_space, name):
         self.w = {}
         self.t_w = {}
-        # self.scalarInput = tf.placeholder(shape=[None, 84 * 84 * 1], dtype=tf.float32)
         self.imageIn = tf.placeholder('float32', [None, 84, 84, 4], name="imageIn")
         self.conv1 = slim.conv2d(self.imageIn, 32, 8, 4, 'VALID',
                                  biases_initializer=None, scope='%s/conv1' % name)
@@ -82,7 +82,7 @@ class DoubleDuelingDQNAgent(object):
             #  "batch_size": 8,
             "update_freq": 4,
             "y": .99,
-            "startE": 1,
+            "startE": 1.0,
             "endE": 0.1,
             "total_steps": 5000000,
             "annealing_steps": 10000,
@@ -123,12 +123,10 @@ class DoubleDuelingDQNAgent(object):
         self.jList = []
         self.rList = []
         self.total_steps = 0
-        self.loss = 0
+        self.loss = .0
 
         if not os.path.exists(self.config["path"]):
             os.makedirs(self.config["path"])
-
-        self.merged = tf.summary.merge_all()
 
         log_path = "%s/%s/%s/%s" % (FLAGS.log_dir,
                                     FLAGS.env_name,
@@ -162,16 +160,17 @@ class DoubleDuelingDQNAgent(object):
                     feed_dict={
                         self.mainQN.imageIn:np.stack(trainBatch[:, 0]),
                         self.mainQN.targetQ:targetQ,
-                        self.mainQN.actions:trainBatch[:, 1]
+                        self.mainQN.actions:trainBatch[:, 1],
                     })
                 self.loss = loss
                 self.updateTarget(self.targetOps, self.sess)
+                # self.writer.add_summary(summary, self.total_steps)
                 #  self.train_writer.add_summary(summary, self.total_steps)
         return s1, self.loss, self.e
 
     def act(self, obs, reward, done):
         if np.random.rand(1) < self.e or self.total_steps < self.config["pre_train_steps"]:
-            a = np.random.randint(0, 4)
+            a = np.random.randint(0, self.env.action_space.n)
         else:
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
         return a
