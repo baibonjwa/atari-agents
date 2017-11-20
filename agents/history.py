@@ -20,7 +20,7 @@ class History():
     def sample(self, size):
         results = []
         for i in range(size):
-            index = random.randint(4, self.buffer_size)
+            index = random.randint(4, self.buffer_size - 1)
             sample = self.buffer[index] 
             preStates = self.getState(index - 1)
             postStates = self.getState(index)
