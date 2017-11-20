@@ -10,7 +10,7 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from agents.utils import variable_summaries, rgb2gray
-from agents.history import History
+from agents.memory import Memory
 from scipy.misc import imresize
 
 from inflection import underscore
@@ -80,7 +80,6 @@ def main():
         episode_count = agent.config["num_episodes"]
         max_episode_length = agent.config["max_epLength"]
         episode_rewards = []
-        myBuffer = History()
         rewards = []
 
         e_tf = tf.placeholder(shape=[None], dtype=tf.float32)
@@ -98,7 +97,7 @@ def main():
         done = False
         episode_num = 0
 
-        history = History()
+        memory = Memory()
         obs = env.reset()
         obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
         state = obs
@@ -107,17 +106,21 @@ def main():
         for i in tqdm(range(total_steps)):
             action = agent.act(state, reward, done)
             obs, reward, done, _ = env.step(action)
-            s1, loss, e = agent.learn(state, reward, action, done, history, myBuffer)
+            env.render()
+            obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
+            memory.add(obs, reward, action, done)
+            s1, loss, e = agent.learn(state, reward, action, done, memory)
+
             e_list.append(e)
             loss_list.append(loss)
             state = s1
             episode_rewards.append(reward)
+
             if done:
                 episode_num += 1
                 episode_rewards_sum = np.sum(episode_rewards)
                 rewards.append(episode_rewards_sum)
                 episode_rewards = []
-                myBuffer.add(history.buffer)
                 obs = env.reset()
                 obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
                 state = obs

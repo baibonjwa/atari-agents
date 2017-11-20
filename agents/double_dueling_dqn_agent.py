@@ -134,17 +134,16 @@ class DoubleDuelingDQNAgent(object):
                                     FLAGS.timestamp)
         self.writer = tf.summary.FileWriter("%s/%s" % (log_path, '/train'), sess.graph)
 
-    def learn(self, state, action, reward, done, episodeBuffer, myBuffer):
-        s1 = state
+    def learn(self, state, action, reward, done, memory):
         self.total_steps += 1
-        episodeBuffer.add(np.reshape(np.array([state, action, reward, s1, done]), [1, 5]))
 
         if self.total_steps > self.config["pre_train_steps"]:
+            self.env.render()
             if self.e > self.config["endE"]:
                 self.e -= self.stepDrop
 
             if self.total_steps % (self.config["update_freq"]) == 0:
-                trainBatch = myBuffer.sample(self.config["batch_size"])
+                trainBatch = memory.sample(self.config["batch_size"])
                 self.lastStates = np.stack(trainBatch[:, 3])
                 Q1 = self.sess.run(self.mainQN.predict, feed_dict={
                     self.mainQN.imageIn:np.stack(trainBatch[:, 3])
@@ -166,7 +165,7 @@ class DoubleDuelingDQNAgent(object):
                 self.updateTarget(self.targetOps, self.sess)
                 # self.writer.add_summary(summary, self.total_steps)
                 #  self.train_writer.add_summary(summary, self.total_steps)
-        return s1, self.loss, self.e
+        return state, self.loss, self.e
 
     def act(self, obs, reward, done):
         if np.random.rand(1) < self.e or self.total_steps < self.config["pre_train_steps"]:
