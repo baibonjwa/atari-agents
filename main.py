@@ -9,9 +9,8 @@ import sys
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from agents.utils import variable_summaries, rgb2gray
+from agents.utils import variable_summaries
 from agents.memory import Memory
-from scipy.misc import imresize
 
 from inflection import underscore
 from tensorflow.python import debug as tf_debug
@@ -100,19 +99,15 @@ def main():
         memory = Memory()
         obs = env.reset()
         env.render()
-        obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
-        state = obs
 
         #  for i in tqdm(range(episode_count)):
         for i in tqdm(range(total_steps)):
-            action, obs, reward, done, _ = agent.act(state, reward, done)
-            obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
+            action, obs, reward, done, _ = agent.act()
             memory.add(obs, reward, action, done)
-            s1, loss, e = agent.learn(state, reward, action, done, memory)
+            s1, loss, e = agent.learn(obs, reward, action, done, memory)
 
             e_list.append(e)
             loss_list.append(loss)
-            state = s1
             episode_rewards.append(reward)
 
             if done:
@@ -120,9 +115,7 @@ def main():
                 episode_rewards_sum = np.sum(episode_rewards)
                 rewards.append(episode_rewards_sum)
                 episode_rewards = []
-                obs = env.reset()
-                obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
-                state = obs
+                env.reset()
 
                 merged = tf.summary.merge_all()
                 summary = sess.run(merged, feed_dict={

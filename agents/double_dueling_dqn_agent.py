@@ -1,14 +1,14 @@
 from __future__ import division
 
 import os
-import random
 import pdb # pylint: disable=unused-import
 import functools
 
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim # pylint: disable=E0611
-from .utils import variable_summaries
+from scipy.misc import imresize
+from .utils import variable_summaries, rgb2gray
 
 def linear(input_, output_size, stddev=0.02, bias_start=0.0, activation_fn=None, name='linear'):
     shape = input_.get_shape().as_list()
@@ -166,12 +166,13 @@ class DoubleDuelingDQNAgent(object):
                 #  self.train_writer.add_summary(summary, self.total_steps)
         return state, self.loss, self.e
 
-    def act(self, obs, reward, done):
+    def act(self):
         if np.random.rand(1) < self.e or self.total_steps < self.config["pre_train_steps"]:
             a = np.random.randint(0, self.env.action_space.n)
         else:
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
         obs, reward, done, _ = self.env.step(a)
+        obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
         self.env.render()
         return a, obs, reward, done, _
 
