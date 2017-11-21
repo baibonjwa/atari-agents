@@ -7,13 +7,8 @@ class Memory():
         self.memory_size = memory_size
         self.memory = []
 
-    # def add(self, experience):
-    #     if len(self.buffer) + len(experience) >= self.buffer_size:
-    #         self.buffer[0:(len(experience) + len(self.buffer)) -  self.buffer_size] = []
-    #     self.buffer.extend(experience)
-
     def add(self, screen, reward, action, done):
-        self.memory.append([screen, reward, action, done])
+        self.memory.append(np.array([screen, reward, action, done]))
         if len(self.memory) > self.memory_size:
           self.memory = self.memory[-self.memory_size:]
 

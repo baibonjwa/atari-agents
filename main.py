@@ -99,14 +99,13 @@ def main():
 
         memory = Memory()
         obs = env.reset()
+        env.render()
         obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
         state = obs
 
         #  for i in tqdm(range(episode_count)):
         for i in tqdm(range(total_steps)):
-            action = agent.act(state, reward, done)
-            obs, reward, done, _ = env.step(action)
-            env.render()
+            action, obs, reward, done, _ = agent.act(state, reward, done)
             obs = imresize(rgb2gray(obs)/255., (agent.config["screen_width"], agent.config["screen_height"]))
             memory.add(obs, reward, action, done)
             s1, loss, e = agent.learn(state, reward, action, done, memory)

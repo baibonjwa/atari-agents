@@ -138,7 +138,6 @@ class DoubleDuelingDQNAgent(object):
         self.total_steps += 1
 
         if self.total_steps > self.config["pre_train_steps"]:
-            self.env.render()
             if self.e > self.config["endE"]:
                 self.e -= self.stepDrop
 
@@ -172,7 +171,9 @@ class DoubleDuelingDQNAgent(object):
             a = np.random.randint(0, self.env.action_space.n)
         else:
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
-        return a
+        obs, reward, done, _ = self.env.step(a)
+        self.env.render()
+        return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):
         total_vars = len(tfVars)
