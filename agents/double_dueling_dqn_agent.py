@@ -3,7 +3,7 @@ from __future__ import division
 import os
 import pdb # pylint: disable=unused-import
 import functools
-
+import time
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim # pylint: disable=E0611
@@ -67,7 +67,10 @@ class Qnetwork():
 
         self.td_error = tf.square(self.targetQ - self.Q)
         self.loss = tf.reduce_mean(self.td_error)
-        self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
+        # self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
+        # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
+        # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
+        self.trainer = tf.train.RMSPropOptimizer(0.00025, momentum=0.95, epsilon=0.01)
         self.updateModel = self.trainer.minimize(self.loss)
 
 class DoubleDuelingDQNAgent(object):
@@ -85,9 +88,10 @@ class DoubleDuelingDQNAgent(object):
             "startE": 1.0,
             "endE": 0.1,
             "total_steps": 5000000,
-            "annealing_steps": 10000,
+            # "annealing_steps": 10000,
+            "annealing_steps": 20000,
             "num_episodes": 10000,
-            "pre_train_steps": 10000,
+            "pre_train_steps": 20000,
             "max_epLength": 1000,
             "screen_width": 84,
             "screen_height": 84,
@@ -142,6 +146,7 @@ class DoubleDuelingDQNAgent(object):
                 self.e -= self.stepDrop
 
             if self.total_steps % (self.config["update_freq"]) == 0:
+
                 trainBatch = memory.sample(self.config["batch_size"])
                 self.lastStates = np.stack(trainBatch[:, 3])
                 Q1 = self.sess.run(self.mainQN.predict, feed_dict={
@@ -173,7 +178,7 @@ class DoubleDuelingDQNAgent(object):
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
         obs, reward, done, _ = self.env.step(a)
         obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
-        self.env.render()
+        # self.env.render()
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):

@@ -5,6 +5,8 @@ import datetime
 import pdb
 import random
 import logging
+import timeit
+import time
 import sys
 import tensorflow as tf
 import numpy as np
