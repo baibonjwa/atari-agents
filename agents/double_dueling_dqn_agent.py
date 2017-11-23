@@ -98,7 +98,6 @@ class DoubleDuelingDQNAgent(object):
             "load_model": False,
             "path": "./dqn",
             "h_size": 512,
-            #  "h_size": 1024,
             "tau": 0.001,
         }
 
@@ -166,7 +165,8 @@ class DoubleDuelingDQNAgent(object):
                         self.mainQN.actions:trainBatch[:, 1],
                     })
                 self.loss = loss
-                self.updateTarget(self.targetOps, self.sess)
+                # self.updateTarget(self.targetOps, self.sess)
+
                 # self.writer.add_summary(summary, self.total_steps)
                 #  self.train_writer.add_summary(summary, self.total_steps)
         return state, self.loss, self.e
@@ -178,7 +178,7 @@ class DoubleDuelingDQNAgent(object):
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
         obs, reward, done, _ = self.env.step(a)
         obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
-        # self.env.render()
+        self.env.render()
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):

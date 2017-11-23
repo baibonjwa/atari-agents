@@ -1,10 +1,9 @@
 ## atari-agent
-
-Tensorflow implementation of DQN, A3C
+Tensorflow implementation of DQN
 
 This implementation contains:
 
-#### DQN 
+#### DQN
 1. Deep Q-network and Q-learning
 2. Experience replay memory
     - to reduce the correlations between consecutive updates
@@ -12,10 +11,6 @@ This implementation contains:
     - to reduce the correlations between target and predicted Q-values
 4. Double DQN
 5. Dueling DQN
-
-#### A3C
-1. LSTM
-2. FC
 
 
 ## Requirements
@@ -35,18 +30,11 @@ First, install prerequisites with:
 
 To train a model for Breakout:
 
-    $ python main.py --env_name=Breakout-v0 --agent_name=TBD --is_train=True
-    $ python main.py --env_name=Breakout-v0 --agent_name=TBD --is_train=True --display=True
-
-To test and record the screen with gym:
-
-    $ python main.py --is_train=False
-    $ python main.py --is_train=False --display=True
-
+    $ python main.py
 
 ## Results
 
-Result of training for 24 hours using GTX 1060 ti.
+TBD
 
 ## References
 
