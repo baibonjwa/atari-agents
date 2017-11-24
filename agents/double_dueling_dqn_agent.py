@@ -178,7 +178,7 @@ class DoubleDuelingDQNAgent(object):
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
         obs, reward, done, _ = self.env.step(a)
         obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
-        self.env.render()
+        # self.env.render()
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):
