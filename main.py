@@ -100,6 +100,7 @@ def main():
 
         memory = Memory()
         obs = env.reset()
+        agent.env = env
         # env.render()
 
         #  for i in tqdm(range(episode_count)):
