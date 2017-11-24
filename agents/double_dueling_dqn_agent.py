@@ -91,7 +91,7 @@ class DoubleDuelingDQNAgent(object):
             # "annealing_steps": 10000,
             "annealing_steps": 30000,
             "num_episodes": 10000,
-            "pre_train_steps": 20000,
+            "pre_train_steps": 50000,
             "max_epLength": 1000,
             "screen_width": 84,
             "screen_height": 84,
@@ -178,7 +178,7 @@ class DoubleDuelingDQNAgent(object):
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
         obs, reward, done, _ = self.env.step(a)
         obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
-        self.env.render()
+        # self.env.render()
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):

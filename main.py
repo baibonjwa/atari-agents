@@ -100,7 +100,7 @@ def main():
 
         memory = Memory()
         obs = env.reset()
-        env.render()
+        # env.render()
 
         #  for i in tqdm(range(episode_count)):
         for i in tqdm(range(total_steps)):
