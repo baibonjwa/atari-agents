@@ -105,7 +105,9 @@ def main():
 
         #  for i in tqdm(range(episode_count)):
         for i in tqdm(range(total_steps)):
-            action, obs, reward, done, _ = agent.act()
+
+
+            action, obs, reward, done, _ = agent.act(memory)
             memory.add(obs, reward, action, done)
             s1, loss, e = agent.learn(obs, reward, action, done, memory)
 

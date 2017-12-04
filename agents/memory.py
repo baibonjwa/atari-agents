@@ -27,3 +27,14 @@ class Memory():
             results.append([preStates, sample[2], sample[1], postStates, sample[3]])
         results = np.array(results)
         return results
+
+    def last(self, size=4):
+        results = []
+        for i in range(size):
+            index = self.memory_size - i - 1
+            sample = self.memory[index]
+            preStates = self.getState(index - 1)
+            postStates = self.getState(index)
+            results.append([preStates, sample[2], sample[1], postStates, sample[3]])
+        results = np.array(results)
+        return results

@@ -96,7 +96,7 @@ class DoubleDuelingDQNAgent(object):
             "screen_width": 84,
             "screen_height": 84,
             "load_model": False,
-            "path": "./dqn",
+            "path": "./ckpt",
             "h_size": 512,
             "tau": 0.001,
         }
@@ -171,11 +171,11 @@ class DoubleDuelingDQNAgent(object):
                 #  self.train_writer.add_summary(summary, self.total_steps)
         return state, self.loss, self.e
 
-    def act(self):
+    def act(self, memory):
         if np.random.rand(1) < self.e or self.total_steps < self.config["pre_train_steps"]:
             a = np.random.randint(0, self.env.action_space.n)
         else:
-            a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:self.lastStates})[0]
+            a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:np.stack(memory.last()[:, 3])})[0]
         obs, reward, done, _ = self.env.step(a)
         obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
         # self.env.render()
