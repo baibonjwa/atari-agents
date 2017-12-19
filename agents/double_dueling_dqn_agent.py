@@ -30,8 +30,8 @@ class Qnetwork():
     def __init__(self, h_size, action_space, name):
         self.w = {}
         self.t_w = {}
-        self.imageIn = tf.placeholder('float32', [None, 84, 84, 4], name="imageIn")
-        self.conv1 = slim.conv2d(self.imageIn, 32, 8, 4, 'VALID',
+        self.input_data = tf.placeholder('float32', [None, 84, 84, 4], name="input_data")
+        self.conv1 = slim.conv2d(self.input_data, 32, 8, 4, 'VALID',
                                  biases_initializer=None, scope='%s/conv1' % name)
         self.conv2 = slim.conv2d(self.conv1, 64, 4, 2, 'VALID',
                                  biases_initializer=None, scope='%s/conv2' % name)
@@ -71,7 +71,7 @@ class Qnetwork():
         # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
         # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
         self.trainer = tf.train.RMSPropOptimizer(0.00025, momentum=0.95, epsilon=0.01)
-        self.updateModel = self.trainer.minimize(self.loss)
+        self.optimizer = self.trainer.minimize(self.loss)
 
 class DoubleDuelingDQNAgent(object):
     def __init__(self, env, sess, FLAGS):
@@ -149,18 +149,19 @@ class DoubleDuelingDQNAgent(object):
                 trainBatch = memory.sample(self.config["batch_size"])
                 self.lastStates = np.stack(trainBatch[:, 3])
                 Q1 = self.sess.run(self.mainQN.predict, feed_dict={
-                    self.mainQN.imageIn:np.stack(trainBatch[:, 3])
+                    self.mainQN.input_data:np.stack(trainBatch[:, 3])
                 })
                 Q2 = self.sess.run(self.targetQN.Qout, feed_dict={
-                    self.targetQN.imageIn:np.stack(trainBatch[:, 3])
+                    self.targetQN.input_data:np.stack(trainBatch[:, 3])
                 })
                 end_multiplier = -(trainBatch[:, 4] - 1)
                 doubleQ = Q2[range(self.config["batch_size"]), Q1]
                 targetQ = trainBatch[:, 2] + (self.config["y"] * doubleQ * end_multiplier)
+
                 _, loss = self.sess.run(
-                    [self.mainQN.updateModel, self.mainQN.loss],
+                    [self.mainQN.optimizer, self.mainQN.loss],
                     feed_dict={
-                        self.mainQN.imageIn:np.stack(trainBatch[:, 0]),
+                        self.mainQN.input_data:np.stack(trainBatch[:, 0]),
                         self.mainQN.targetQ:targetQ,
                         self.mainQN.actions:trainBatch[:, 1],
                     })
@@ -176,7 +177,7 @@ class DoubleDuelingDQNAgent(object):
         if np.random.rand(1) < self.e or self.total_steps < self.config["pre_train_steps"]:
             a = np.random.randint(0, self.env.action_space.n)
         else:
-            a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.imageIn:np.stack(memory.last()[:, 3])})[0]
+            a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.input_data:np.stack(memory.last()[:, 3])})[0]
         obs, reward, done, _ = self.env.step(a)
         obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
         # self.env.render()
