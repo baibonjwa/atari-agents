@@ -165,7 +165,8 @@ class DoubleDuelingDQNAgent(object):
                         self.mainQN.actions:trainBatch[:, 1],
                     })
                 self.loss = loss
-                self.updateTarget(self.targetOps, self.sess)
+        if self.total_steps % 100 == 99:
+            self.updateTarget(self.targetOps, self.sess)
 
                 # self.writer.add_summary(summary, self.total_steps)
                 #  self.train_writer.add_summary(summary, self.total_steps)
