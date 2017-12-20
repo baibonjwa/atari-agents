@@ -100,6 +100,7 @@ def main():
         done = False
         episode_num = 0
 
+        agent.env = env
         memory = Memory()
         history = History()
         env = Environment(env)
