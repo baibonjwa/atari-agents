@@ -13,6 +13,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from agents.utils import variable_summaries
 from agents.memory import Memory
+from agents.history import History
+from agents.environment import Environment
 
 from inflection import underscore
 from tensorflow.python import debug as tf_debug
@@ -99,16 +101,19 @@ def main():
         episode_num = 0
 
         memory = Memory()
+        history = History()
+        env = Environment(env)
         obs = env.reset()
-        agent.env = env
-        # env.render()
+        for _ in range(4):
+            history.add(obs)
+        agent.history = history
+        agent.memory = memory
 
         #  for i in tqdm(range(episode_count)):
         for i in tqdm(range(total_steps)):
 
-            action, obs, reward, done, _ = agent.act(memory)
-            memory.add(obs, reward, action, done)
-            s1, loss, e = agent.learn(obs, reward, action, done, memory)
+            action, obs, reward, done, _ = agent.act(env)
+            s1, loss, e = agent.learn(obs, reward, action, done)
 
             e_list.append(e)
             loss_list.append(loss)

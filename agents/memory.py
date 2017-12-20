@@ -38,3 +38,6 @@ class Memory():
             results.append([preStates, sample[2], sample[1], postStates, sample[3]])
         results = np.array(results)
         return results
+
+    def count(self):
+        return len(self.memory)

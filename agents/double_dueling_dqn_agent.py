@@ -9,6 +9,8 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim # pylint: disable=E0611
 from scipy.misc import imresize
 from .utils import variable_summaries, rgb2gray
+from .history import History
+from .memory import Memory
 
 def linear(input_, output_size, stddev=0.02, bias_start=0.0, activation_fn=None, name='linear'):
     shape = input_.get_shape().as_list()
@@ -77,6 +79,8 @@ class DoubleDuelingDQNAgent(object):
     def __init__(self, env, sess, FLAGS):
 
         self.env = env
+        self.history = History()
+        self.memory = Memory()
         self.action_space = env.action_space
 
         self.config = {
@@ -89,9 +93,10 @@ class DoubleDuelingDQNAgent(object):
             "endE": 0.1,
             "total_steps": 5000000,
             # "annealing_steps": 10000,
-            "annealing_steps": 20000,
+            "annealing_steps": 50000,
             "num_episodes": 10000,
             "pre_train_steps": 20000,
+            # "pre_train_steps": 2,
             "max_epLength": 1000,
             "screen_width": 84,
             "screen_height": 84,
@@ -137,16 +142,21 @@ class DoubleDuelingDQNAgent(object):
                                     FLAGS.timestamp)
         self.writer = tf.summary.FileWriter("%s/%s" % (log_path, '/train'), sess.graph)
 
-    def learn(self, state, action, reward, done, memory):
+    def learn(self, state, action, reward, done):
         self.total_steps += 1
 
+        self.history.add(state)
+        self.memory.add(state, action, reward, done)
+
         if self.total_steps > self.config["pre_train_steps"]:
+            if self.memory.count() < 4:
+               return
             if self.e > self.config["endE"]:
                 self.e -= self.stepDrop
-
             if self.total_steps % (self.config["update_freq"]) == 0:
 
-                trainBatch = memory.sample(self.config["batch_size"])
+                trainBatch = self.memory.sample(self.config["batch_size"])
+
                 self.lastStates = np.stack(trainBatch[:, 3])
                 Q1 = self.sess.run(self.mainQN.predict, feed_dict={
                     self.mainQN.input_data:np.stack(trainBatch[:, 3])
@@ -166,21 +176,21 @@ class DoubleDuelingDQNAgent(object):
                         self.mainQN.actions:trainBatch[:, 1],
                     })
                 self.loss = loss
-        if self.total_steps % 100 == 99:
-            self.updateTarget(self.targetOps, self.sess)
+
+            if self.total_steps % 100 == 99:
+                self.updateTarget(self.targetOps, self.sess)
 
                 # self.writer.add_summary(summary, self.total_steps)
                 #  self.train_writer.add_summary(summary, self.total_steps)
         return state, self.loss, self.e
 
-    def act(self, memory):
+    def act(self, env):
         if np.random.rand(1) < self.e or self.total_steps < self.config["pre_train_steps"]:
             a = np.random.randint(0, self.env.action_space.n)
         else:
-            a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.input_data:np.stack(memory.last()[:, 3])})[0]
+            a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.input_data:np.stack(self.memory.last()[:, 3])})[0]
         obs, reward, done, _ = self.env.step(a)
-        obs = imresize(rgb2gray(obs)/255., (self.config["screen_width"], self.config["screen_height"]))
-        # self.env.render()
+        obs = imresize(rgb2gray(obs)/255., (84, 84))
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):
