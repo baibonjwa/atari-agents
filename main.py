@@ -86,14 +86,14 @@ def main():
         rewards = []
 
         e_tf = tf.placeholder(shape=[None], dtype=tf.float32)
-        loss_tf = tf.placeholder(shape=[None], dtype=tf.float32) 
+        # loss_tf = tf.placeholder(shape=[None], dtype=tf.float32) 
         r_tf = tf.placeholder(shape=[None], dtype=tf.float32)
 
         e_list = []
         loss_list = []
 
         variable_summaries(e_tf, 'e')
-        variable_summaries(loss_tf, 'loss')
+        # variable_summaries(loss_tf, 'loss')
         variable_summaries(r_tf, 'reward')
 
         reward = 0
@@ -131,7 +131,7 @@ def main():
                 summary = sess.run(merged, feed_dict={
                     r_tf: rewards,
                     e_tf: e_list,
-                    loss_tf: loss_list,
+                    # loss_tf: loss_list,
                 })
                 agent.writer.add_summary(summary, episode_num)
 
