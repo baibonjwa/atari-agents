@@ -49,6 +49,7 @@ AVAILABLE_AGENT_LIST = [
         'A3cLstmAgent',
         ]
 
+
 def main():
     """This is main function"""
 
@@ -65,6 +66,8 @@ def main():
 
     with tf.Session() as sess:
         #  sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+
+        # tf.control_dependencies(None)
         agent_module = importlib.import_module(underscore('agents.' + FLAGS.agent_name))
         agent_klass = getattr(agent_module, FLAGS.agent_name)
         agent = agent_klass(env, sess, FLAGS)
@@ -82,23 +85,28 @@ def main():
         total_steps = agent.config["total_steps"]
         episode_count = agent.config["num_episodes"]
         max_episode_length = agent.config["max_epLength"]
-        episode_rewards = []
-        rewards = []
 
-        e_tf = tf.placeholder(shape=[None], dtype=tf.float32)
+        ep_rewards = []
+        actions = []
+
+        ep_reward = 0.
+        # e_tf = tf.placeholder(shape=[None], dtype=tf.float32)
         # loss_tf = tf.placeholder(shape=[None], dtype=tf.float32) 
-        r_tf = tf.placeholder(shape=[None], dtype=tf.float32)
-
+        # r_tf = tf.placeholder(shape=[None], dtype=tf.float32)
         e_list = []
         loss_list = []
-
-        variable_summaries(e_tf, 'e')
+        # variable_summaries(e_tf, 'e')
         # variable_summaries(loss_tf, 'loss')
-        variable_summaries(r_tf, 'reward')
+        # variable_summaries(r_tf, 'reward')
 
+        total_reward = 0.
         reward = 0
         done = False
         episode_num = 0
+        avg_reward = 0.
+        avg_loss  = 0.
+        avg_q = 0.
+        avg_ep_reward, max_ep_reward, min_ep_reward = 0., 0., 0.
 
         agent.env = env
         memory = Memory()
@@ -111,29 +119,100 @@ def main():
         agent.memory = memory
 
         #  for i in tqdm(range(episode_count)):
-        for i in tqdm(range(total_steps)):
+        for step in tqdm(range(total_steps), ncols=70, initial=0):
+
+            if step == agent.config["pre_train_steps"]:
+                num_game, agent.update_count, ep_reward = 0, 0, 0.
+                total_reward, agent.total_loss, agent.total_q = 0., 0., 0.
+                ep_rewards, actions = [], []
 
             action, obs, reward, done, _ = agent.act(env)
-            s1, loss, e = agent.learn(obs, reward, action, done)
+            total_loss, total_q, update_count, s1, loss, e = agent.learn(obs, reward, action, done)
 
-            e_list.append(e)
-            loss_list.append(loss)
-            episode_rewards.append(reward)
+            # e_list.append(e)
+            # loss_list.append(loss)
+            # ep_rewards.append(reward)
 
             if done:
-                episode_num += 1
-                episode_rewards_sum = np.sum(episode_rewards)
-                rewards.append(episode_rewards_sum)
-                episode_rewards = []
                 env.reset()
+                episode_num += 1
+                # episode_rewards_sum = np.sum(episode_rewards)
+                # rewards.append(episode_rewards_sum)
+                ep_rewards.append(ep_reward)
+                ep_reward = 0.
+            else:
+                ep_reward += reward
 
-                merged = tf.summary.merge_all()
-                summary = sess.run(merged, feed_dict={
-                    r_tf: rewards,
-                    e_tf: e_list,
-                    # loss_tf: loss_list,
-                })
-                agent.writer.add_summary(summary, episode_num)
+            actions.append(action)
+            total_reward += reward
+
+                # merged = tf.summary.merge_all()
+                # summary = sess.run(merged, feed_dict={
+                #     r_tf: rewards,
+                #     e_tf: e_list,
+                #     # loss_tf: loss_list,
+                # })
+                # agent.writer.add_summary(summary, episode_num)
+
+            if step >= agent.config["pre_train_steps"]:
+                if step % 2500 == 2500 - 1:
+                    avg_reward = total_reward / 2500
+                    avg_loss = total_loss / update_count
+                    avg_q = total_q / update_count
+
+                    try:
+                        max_ep_reward = np.max(ep_rewards)
+                        min_ep_reward = np.min(ep_rewards)
+                        avg_ep_reward = np.mean(ep_rewards)
+                    except:
+                        max_ep_reward, min_ep_reward, avg_ep_reward = 0, 0, 0
+
+                    print('\navg_r: %.4f, avg_l: %.6f, avg_q: %3.6f, avg_ep_r: %.4f, max_ep_r: %.4f, min_ep_r: %.4f, # game: %d, e: %.4f' \
+                        % (avg_reward, avg_loss, avg_q, avg_ep_reward, max_ep_reward, min_ep_reward, episode_num, e))
+
+                    # if max_avg_ep_reward * 0.9 <= avg_ep_reward:
+                    #     self.step_assign_op.eval({self.step_input: self.step + 1})
+                    #     self.save_model(self.step + 1)
+                    #     max_avg_ep_reward = max(max_avg_ep_reward, avg_ep_reward)
+
+                    if step > 180:
+                        agent.inject_summary({
+                            'average.reward': avg_reward,
+                            'average.loss': avg_loss,
+                            'average.q': avg_q,
+                            'episode.max reward': max_ep_reward,
+                            'episode.min reward': min_ep_reward,
+                            'episode.avg reward': avg_ep_reward,
+                            'episode.num of game': episode_num,
+                            'episode.rewards': ep_rewards,
+                            'episode.actions': actions,
+                            'training.learning_rate': agent.learning_rate_op.eval({agent.learning_rate_step: step}),
+                            'e': e,
+                        }, step)
+
+                    episode_num = 0
+                    total_reward = 0.
+                    agent.total_loss = 0.
+                    agent.total_q = 0.
+                    agent.update_count = 0
+                    ep_reward = 0.
+                    ep_rewards = []
+                    actions = []
+
+            # if done:
+            #     episode_num += 1
+            #     episode_rewards_sum = np.sum(episode_rewards)
+            #     rewards.append(episode_rewards_sum)
+            #     episode_rewards = []
+            #     env.reset()
+
+                # merged = tf.summary.merge_all()
+                # summary = sess.run(merged, feed_dict={
+                #     r_tf: rewards,
+                #     e_tf: e_list,
+                #     # loss_tf: loss_list,
+                # })
+                # agent.writer.add_summary(summary, episode_num)
 
     env.close()
 
