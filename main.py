@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from agents.utils import variable_summaries
 from agents.memory import Memory
+from agents.replay_memory import ReplayMemory
 from agents.history import History
 from agents.environment import Environment
 
@@ -111,7 +112,7 @@ def main():
         avg_ep_reward, max_ep_reward, min_ep_reward = 0., 0., 0.
 
         agent.env = env
-        memory = Memory()
+        memory = ReplayMemory()
         history = History()
         env = Environment(env)
         obs = env.reset()
@@ -157,6 +158,7 @@ def main():
                 # })
                 # agent.writer.add_summary(summary, episode_num)
 
+            # TODO: there is hard code
             if step_i >= agent.config["pre_train_steps"]:
                 if step_i % 2500 == 2500 - 1:
                     avg_reward = total_reward / 2500

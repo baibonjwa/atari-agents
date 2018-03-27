@@ -250,8 +250,8 @@ class DoubleDuelingDQNAgent(object):
         # self.q = {}
         self.t_w = {}
         with tf.variable_scope('main'):
-            self.input_data = tf.placeholder('float32', [None, 84, 84, 4], name="input_data")
-            self.l1, self.w['l1_w'], self.w['l1_b'] = conv2d(self.input_data,
+            self.s_t = tf.placeholder('float32', [None, 84, 84, 4], name="s_t")
+            self.l1, self.w['l1_w'], self.w['l1_b'] = conv2d(self.s_t,
                 32, [8, 8], [4, 4], tf.truncated_normal_initializer(0, 0.02), tf.nn.relu, 'NHWC', name='l1')
             self.l2, self.w['l2_w'], self.w['l2_b'] = conv2d(self.l1,
                 64, [4, 4], [2, 2], tf.truncated_normal_initializer(0, 0.02), tf.nn.relu, 'NHWC', name='l2')
@@ -262,17 +262,17 @@ class DoubleDuelingDQNAgent(object):
             self.l4, self.w['l4_w'], self.w['l4_b'] = linear(self.l3_flat, 512, activation_fn=tf.nn.relu, name='l4')
             self.q, self.w['q_w'], self.w['q_b'] = linear(self.l4, self.env.action_space.n, name='q')
             self.q_action = tf.argmax(self.q, dimension=1)
-            self.avg_q = tf.reduce_mean(self.q, 0)
-            q_summary = []
-            for idx in range(self.env.action_space.n):
-                q_summary.append(tf.summary.histogram('q/%s' % idx, self.avg_q[idx]))
-            self.q_summary = tf.summary.merge(q_summary, 'q_summary')
 
+            q_summary = []
+            avg_q = tf.reduce_mean(self.q, 0)
+            for idx in range(self.env.action_space.n):
+                q_summary.append(tf.summary.histogram('q/%s' % idx, avg_q[idx]))
+            self.q_summary = tf.summary.merge(q_summary, 'q_summary')
 
         # TargetQ
         with tf.variable_scope('target'):
-            self.target_input_data = tf.placeholder('float32', [None, 84, 84, 4], name="input_data")
-            self.t_l1, self.t_w['l1_w'], self.t_w['l1_b'] = conv2d(self.target_input_data,
+            self.target_s_t = tf.placeholder('float32', [None, 84, 84, 4], name="target_s_t")
+            self.t_l1, self.t_w['l1_w'], self.t_w['l1_b'] = conv2d(self.target_s_t,
                 32, [8, 8], [4, 4], tf.truncated_normal_initializer(0, 0.02), tf.nn.relu, 'NHWC', name='target_l1')
             self.t_l2, self.t_w['l2_w'], self.t_w['l2_b'] = conv2d(self.t_l1,
                 64, [4, 4], [2, 2], tf.truncated_normal_initializer(0, 0.02), tf.nn.relu, 'NHWC', name='target_l2')
@@ -295,16 +295,16 @@ class DoubleDuelingDQNAgent(object):
                 self.t_w_assign_op[name] = self.t_w[name].assign(self.t_w_input[name])
 
         with tf.variable_scope('optimizer'):
-            self.targetQ = tf.placeholder(shape=[None], dtype=tf.float32, name="targetQ")
-            self.actions = tf.placeholder(shape=[None], dtype=tf.int32, name= "action")
-            self.actions_onehot = tf.one_hot(self.actions, self.env.action_space.n, dtype=tf.float32)
-
+            self.target_q_t = tf.placeholder(shape=[None], dtype=tf.float32, name="target_q_t")
+            self.action = tf.placeholder(shape=[None], dtype=tf.int64, name= "action")
+            action_onehot = tf.one_hot(self.action, self.env.action_space.n, 1.0, 0.0, name='action_onehot')
             # self.Q = tf.reduce_sum(tf.multiply(self.mainQN.Qout, self.actions_onehot), axis=1)
-            self.Q = tf.reduce_sum(self.q * self.actions_onehot, reduction_indices=1, name='Q')
+            q_acted = tf.reduce_sum(self.q * action_onehot, reduction_indices=1, name='Q')
+            self.delta = self.target_q_t - q_acted
 
             # self.td_error = tf.square(self.targetQ - self.Q)
-            self.td_error = self.targetQ - self.Q
-            self.loss = tf.reduce_mean(clipped_error(self.td_error), name="loss")
+            # self.td_error = self.target_q_t - self.delta
+            self.loss = tf.reduce_mean(clipped_error(self.delta), name="loss")
 
             self.learning_rate = 0.00025
             self.learning_rate_minimum = 0.00025
@@ -323,9 +323,8 @@ class DoubleDuelingDQNAgent(object):
             # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
             # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
             # self.trainer = tf.train.RMSPropOptimizer(0.00025, momentum=0.95, epsilon=0.01)
-            self.trainer = tf.train.RMSPropOptimizer(self.learning_rate_op, momentum=0.95, epsilon=0.01)
-            self.optimizer = self.trainer.minimize(self.loss)
-
+            self.optimizer = tf.train.RMSPropOptimizer(
+                self.learning_rate_op, momentum=0.95, epsilon=0.01).minimize(self.loss)
 
         with tf.variable_scope('summary'):
             scalar_summary_tags = ['average.reward', 'average.loss', 'average.q', \
@@ -344,28 +343,36 @@ class DoubleDuelingDQNAgent(object):
                 self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
                 self.summary_ops[tag]  = tf.summary.histogram(tag, self.summary_placeholders[tag])
 
-
-
         tf.initialize_all_variables().run()
         self.update_target_q_network()
 
 
-    def learn(self, step_i, state, action, reward, done):
+    def learn(self, step_i, state, reward, action, done):
 
         # act
         # action, obs, reward, done, _ = self.act(self.env)
 
         self.history.add(state)
-        self.memory.add(state, action, reward, done)
+        # self.memory.add(state, action, reward, done)
+        self.memory.add(state, reward, action, done)
+        # print('action: ')
+        # print(action)
+        # print('reward: ')
+        # print(reward)
 
         loss = .0
         if step_i > self.config["pre_train_steps"]:
-            if self.memory.count() < 4:
+            if self.memory.count < 4:
                return
             if self.e > self.config["endE"]:
                 self.e -= self.stepDrop
             if step_i % (self.config["update_freq"]) == 0:
-                trainBatch = self.memory.sample(self.config["batch_size"])
+                s_t, action, reward, s_t_plus_1, terminal = self.memory.sample()
+                # print('action: ')
+                # print(action)
+                # print('reward: ')
+                # print(reward)
+                # trainBatch = self.memory.sample(self.config["batch_size"])
 
                 # Double Q
                 # self.lastStates = np.stack(trainBatch[:, 3])
@@ -387,23 +394,24 @@ class DoubleDuelingDQNAgent(object):
                 #         self.actions:trainBatch[:, 1],
                 #     })
 
+                # pdb.set_trace()
                 q_t_plus_1 = self.sess.run(self.target_q, feed_dict={
-                    self.target_input_data:np.stack(trainBatch[:, 3])
+                    # self.target_input_data:np.stack(trainBatch[:, 3])
+                    self.target_s_t:s_t_plus_1,
                 })
-                terminal = np.array(trainBatch[:, 4]) + 0.
+                terminal = np.array(terminal) + 0.
                 max_q_t_plus_1 = np.max(q_t_plus_1, axis=1)
-                targetQ = (1. - terminal) * 0.99 * max_q_t_plus_1 + reward
+                target_q_t = (1. - terminal) * 0.99 * max_q_t_plus_1 + reward
 
                 _, q_t, loss = self.sess.run(
                     [self.optimizer, self.q, self.loss],
                     feed_dict={
-                        self.targetQ:targetQ,
-                        self.actions:trainBatch[:, 1],
+                        self.target_q_t: target_q_t,
+                        self.action: action,
                         # self.input_data:np.stack(trainBatch[:, 0]),
-                        self.input_data:np.stack(trainBatch[:, 3]),
+                        self.s_t:s_t,
                         self.learning_rate_step: step_i,
                     })
-
                 self.total_loss += loss
                 self.total_q += q_t.mean()
                 self.update_count += 1
@@ -424,7 +432,7 @@ class DoubleDuelingDQNAgent(object):
         else:
             # a = self.sess.run(self.q_action, feed_dict={self.input_data:np.stack(self.memory.last()[:, 3])})[0]
             # pdb.set_trace()
-            a = self.sess.run(self.q_action, feed_dict={self.input_data:[self.history.get()]})[0]
+            a = self.sess.run(self.q_action, feed_dict={self.s_t:[self.history.get()]})[0]
         # use env rather than self.env because self.env is Gym object and env is Environemnt object
         obs, reward, done, _ = env.step(a)
         self.env.render()
