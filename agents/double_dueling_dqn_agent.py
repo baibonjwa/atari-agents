@@ -143,6 +143,7 @@ class DoubleDuelingDQNAgent(object):
             #  "batch_size": 16,
             "batch_size": 32,
             #  "batch_size": 8,
+            # "update_freq": 4,
             "update_freq": 4,
             # "update_freq": 500,
             "y": .99,
@@ -229,7 +230,6 @@ class DoubleDuelingDQNAgent(object):
 
         self.jList = []
         self.rList = []
-        self.total_steps = 0
         self.update_count = 0
         self.total_loss = 0.
         self.total_q = 0.
@@ -350,22 +350,21 @@ class DoubleDuelingDQNAgent(object):
         self.update_target_q_network()
 
 
-    def learn(self, state, action, reward, done):
+    def learn(self, step_i, state, action, reward, done):
 
         # act
         # action, obs, reward, done, _ = self.act(self.env)
 
-        self.total_steps += 1
         self.history.add(state)
         self.memory.add(state, action, reward, done)
 
         loss = .0
-        if self.total_steps > self.config["pre_train_steps"]:
+        if step_i > self.config["pre_train_steps"]:
             if self.memory.count() < 4:
                return
             if self.e > self.config["endE"]:
                 self.e -= self.stepDrop
-            if self.total_steps % (self.config["update_freq"]) == 0:
+            if step_i % (self.config["update_freq"]) == 0:
                 trainBatch = self.memory.sample(self.config["batch_size"])
 
                 # Double Q
@@ -402,7 +401,7 @@ class DoubleDuelingDQNAgent(object):
                         self.actions:trainBatch[:, 1],
                         # self.input_data:np.stack(trainBatch[:, 0]),
                         self.input_data:np.stack(trainBatch[:, 3]),
-                        self.learning_rate_step: self.total_steps,
+                        self.learning_rate_step: step_i,
                     })
 
                 self.total_loss += loss
@@ -410,7 +409,7 @@ class DoubleDuelingDQNAgent(object):
                 self.update_count += 1
 
 
-            if self.total_steps % 500 == 499:
+            if step_i % 500 == 499:
                 self.update_target_q_network()
                 # self.updateTarget(self.targetOps, self.sess)
                 # self.updateTarget(self.targetOps, self.sess)
@@ -419,15 +418,17 @@ class DoubleDuelingDQNAgent(object):
                 #  self.train_writer.add_summary(summary, self.total_steps)
         return self.total_loss, self.total_q, self.update_count, state, loss, self.e
 
-    def act(self, env):
-        # if np.random.rand(1) < self.e or self.total_steps < self.config["pre_train_steps"]:
-        #     a = np.random.randint(0, self.env.action_space.n)
-        # else:
-        #     a = self.sess.run(self.q_action, feed_dict={self.input_data:np.stack(self.memory.last()[:, 3])})[0]
-        a = np.random.randint(0, self.env.action_space.n)
-        obs, reward, done, _ = self.env.step(a)
+    def act(self, step_i, env):
+        if np.random.rand(1) < self.e or step_i < self.config["pre_train_steps"]:
+            a = np.random.randint(0, self.env.action_space.n)
+        else:
+            # a = self.sess.run(self.q_action, feed_dict={self.input_data:np.stack(self.memory.last()[:, 3])})[0]
+            # pdb.set_trace()
+            a = self.sess.run(self.q_action, feed_dict={self.input_data:[self.history.get()]})[0]
+        # use env rather than self.env because self.env is Gym object and env is Environemnt object
+        obs, reward, done, _ = env.step(a)
         self.env.render()
-        obs = imresize(rgb2gray(obs)/255., (84, 84))
+        # obs = imresize(rgb2gray(obs)/255., (84, 84))
         return a, obs, reward, done, _
 
     def update_target_q_network(self):

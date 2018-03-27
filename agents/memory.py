@@ -23,7 +23,7 @@ class Memory():
         for i in range(size):
             # index = random.randint(4, self.memory_size - 1)
             index = random.randint(4, len(self.memory) - 1)
-            sample = self.memory[index] 
+            sample = self.memory[index]
             preStates = self.getState(index - 1)
             postStates = self.getState(index)
             results.append([preStates, sample[2], sample[1], postStates, sample[3]])

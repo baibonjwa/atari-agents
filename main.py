@@ -63,6 +63,8 @@ def main():
     logger.setLevel(logging.INFO)
 
     env = gym.make(FLAGS.env_name)
+    # env = env.unwrapped
+    # pdb.set_trace()
 
     with tf.Session() as sess:
         #  sess = tf_debug.LocalCLIDebugWrapperSession(sess)
@@ -91,7 +93,7 @@ def main():
 
         ep_reward = 0.
         # e_tf = tf.placeholder(shape=[None], dtype=tf.float32)
-        # loss_tf = tf.placeholder(shape=[None], dtype=tf.float32) 
+        # loss_tf = tf.placeholder(shape=[None], dtype=tf.float32)
         # r_tf = tf.placeholder(shape=[None], dtype=tf.float32)
         e_list = []
         loss_list = []
@@ -119,21 +121,22 @@ def main():
         agent.memory = memory
 
         #  for i in tqdm(range(episode_count)):
-        for step in tqdm(range(total_steps), ncols=70, initial=0):
+        for step_i in tqdm(range(total_steps), ncols=70, initial=0):
 
-            if step == agent.config["pre_train_steps"]:
-                num_game, agent.update_count, ep_reward = 0, 0, 0.
+            if step_i == agent.config["pre_train_steps"]:
+                episode_num, agent.update_count, ep_reward = 0, 0, 0.
                 total_reward, agent.total_loss, agent.total_q = 0., 0., 0.
                 ep_rewards, actions = [], []
 
-            action, obs, reward, done, _ = agent.act(env)
-            total_loss, total_q, update_count, s1, loss, e = agent.learn(obs, reward, action, done)
+            action, obs, reward, done, _ = agent.act(step_i, env)
+            total_loss, total_q, update_count, s1, loss, e = agent.learn(step_i, obs, reward, action, done)
 
             # e_list.append(e)
             # loss_list.append(loss)
             # ep_rewards.append(reward)
 
             if done:
+                # pdb.set_trace()
                 env.reset()
                 episode_num += 1
                 # episode_rewards_sum = np.sum(episode_rewards)
@@ -154,8 +157,8 @@ def main():
                 # })
                 # agent.writer.add_summary(summary, episode_num)
 
-            if step >= agent.config["pre_train_steps"]:
-                if step % 2500 == 2500 - 1:
+            if step_i >= agent.config["pre_train_steps"]:
+                if step_i % 2500 == 2500 - 1:
                     avg_reward = total_reward / 2500
                     avg_loss = total_loss / update_count
                     avg_q = total_q / update_count
@@ -175,7 +178,7 @@ def main():
                     #     self.save_model(self.step + 1)
                     #     max_avg_ep_reward = max(max_avg_ep_reward, avg_ep_reward)
 
-                    if step > 180:
+                    if step_i > 180:
                         agent.inject_summary({
                             'average.reward': avg_reward,
                             'average.loss': avg_loss,
@@ -186,9 +189,9 @@ def main():
                             'episode.num of game': episode_num,
                             'episode.rewards': ep_rewards,
                             'episode.actions': actions,
-                            'training.learning_rate': agent.learning_rate_op.eval({agent.learning_rate_step: step}),
+                            'training.learning_rate': agent.learning_rate_op.eval({agent.learning_rate_step: step_i}),
                             'e': e,
-                        }, step)
+                        }, step_i)
 
                     episode_num = 0
                     total_reward = 0.
