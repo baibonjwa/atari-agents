@@ -175,7 +175,13 @@ class DoubleDuelingDQNAgent(object):
             self.step_input = tf.placeholder('int32', None, name='step_input')
             self.step_assign_op = self.step_op.assign(self.step_input)
 
+        self.sess = sess
         self.build_dqn()
+
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
+        self.update_target_q_network()
+
 
         # self.w = {}
         # self.t_w = {}
@@ -211,13 +217,10 @@ class DoubleDuelingDQNAgent(object):
         #     self.step_input = tf.placeholder('int32', None, name='step_input')
         #     self.step_assign_op = self.step_op.assign(self.step_input)
 
-        # init = tf.global_variables_initializer()
-
         # self.saver = tf.train.Saver()
         # self.trainables = tf.trainable_variables()
         # self.targetOps = self.updateTargetGraph(self.trainables, self.config["tau"])
 
-        self.sess = sess
         # self.sess.run(init)
         # if self.config["load_model"]:
         #     print('Loading Model...')
@@ -243,6 +246,8 @@ class DoubleDuelingDQNAgent(object):
                                     str(self.__class__.__name__),
                                     FLAGS.timestamp)
         self.writer = tf.summary.FileWriter("%s/%s" % (log_path, '/train'), sess.graph)
+        tf.train.write_graph(self.sess.graph, './', 'dqn.pb', False)
+        tf.train.write_graph(self.sess.graph, './', 'dqn.pbtxt')
 
     def build_dqn(self):
         # MainQ
@@ -343,8 +348,9 @@ class DoubleDuelingDQNAgent(object):
                 self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
                 self.summary_ops[tag]  = tf.summary.histogram(tag, self.summary_placeholders[tag])
 
-        tf.initialize_all_variables().run()
-        self.update_target_q_network()
+        # tf.initialize_all_variables().run()
+
+
 
 
     def learn(self, step_i, state, reward, action, done):
@@ -368,10 +374,6 @@ class DoubleDuelingDQNAgent(object):
                 self.e -= self.stepDrop
             if step_i % (self.config["update_freq"]) == 0:
                 s_t, action, reward, s_t_plus_1, terminal = self.memory.sample()
-                # print('action: ')
-                # print(action)
-                # print('reward: ')
-                # print(reward)
                 # trainBatch = self.memory.sample(self.config["batch_size"])
 
                 # Double Q
@@ -394,7 +396,6 @@ class DoubleDuelingDQNAgent(object):
                 #         self.actions:trainBatch[:, 1],
                 #     })
 
-                # pdb.set_trace()
                 q_t_plus_1 = self.sess.run(self.target_q, feed_dict={
                     # self.target_input_data:np.stack(trainBatch[:, 3])
                     self.target_s_t:s_t_plus_1,
