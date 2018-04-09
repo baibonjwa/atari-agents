@@ -18,7 +18,7 @@ class Memory():
         samples = self.memory[(index - size):index]
         return np.reshape(np.array([ np.reshape(x.tolist(), (84, 84)) for x in np.array(samples)[:, 0] ]), (84, 84, 4))
 
-    def sample(self, size):
+    def sample(self, size = 4):
         results = []
         for i in range(size):
             # index = random.randint(4, self.memory_size - 1)

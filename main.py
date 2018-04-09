@@ -172,6 +172,7 @@ def main():
                     except:
                         max_ep_reward, min_ep_reward, avg_ep_reward = 0, 0, 0
 
+                    # pdb.set_trace()
                     print('\navg_r: %.4f, avg_l: %.6f, avg_q: %3.6f, avg_ep_r: %.4f, max_ep_r: %.4f, min_ep_r: %.4f, # game: %d, e: %.4f' \
                         % (avg_reward, avg_loss, avg_q, avg_ep_reward, max_ep_reward, min_ep_reward, episode_num, e))
 
