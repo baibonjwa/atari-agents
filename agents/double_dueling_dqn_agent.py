@@ -201,7 +201,6 @@ class DoubleDuelingDQNAgent(object):
 
         init = tf.global_variables_initializer()
         self.sess.run(init)
-        # self.update_target_q_network()
 
         self.e = self.config["startE"]
         self.stepDrop = (self.config["startE"] - self.config["endE"]) \
@@ -212,7 +211,6 @@ class DoubleDuelingDQNAgent(object):
         self.update_count = 0
         self.total_loss = 0.
         self.total_q = 0.
-        # self.loss = .0
 
         if not os.path.exists(self.config["path"]):
             os.makedirs(self.config["path"])
@@ -270,7 +268,7 @@ class DoubleDuelingDQNAgent(object):
                 target_q_t = (1. - terminal) * 0.99 * max_q_t_plus_1 + reward
 
                 _, q_t, loss = self.sess.run(
-                    [self.optimizer, self.q, self.loss],
+                    [self.optimizer, self.mainQN.Qout, self.loss],
                     feed_dict={
                         self.target_q_t: target_q_t,
                         self.actions: action,
@@ -301,13 +299,15 @@ class DoubleDuelingDQNAgent(object):
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):
-        total_vars = len(tfVars)
-        op_holder = []
-        for idx, var in enumerate(tfVars[0:total_vars//2]):
-            op_holder.append(
-                tfVars[idx + total_vars//2].assign(
-                    (var.value() * tau) + ((1 - tau) * tfVars[idx + total_vars//2].value())))
-        return op_holder
+        with tf.variable_scope('update_target_graph'):
+            total_vars = len(tfVars)
+            op_holder = []
+            for idx, var in enumerate(tfVars[0:total_vars//2]):
+                # pdb.set_trace()
+                op_holder.append(tfVars[idx + total_vars//2].assign(var.value()))
+                # tfVars[idx + total_vars//2].assign(
+                #     (var.value() * tau) + ((1 - tau) * tfVars[idx + total_vars//2].value())))
+            return op_holder
 
     def updateTarget(self, op_holder, sess):
         for op in op_holder:
