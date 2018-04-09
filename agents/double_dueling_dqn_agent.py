@@ -12,6 +12,13 @@ from .utils import variable_summaries, rgb2gray
 from .history import History
 from .memory import Memory
 
+def clipped_error(x):
+  # Huber loss
+  try:
+    return tf.select(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+  except:
+    return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+
 def conv2d(x,
            output_dim,
            kernel_size,
@@ -122,7 +129,6 @@ class DoubleDuelingDQNAgent(object):
         self.config = {
             #  "batch_size": 16,
             "batch_size": 32,
-            #  "batch_size": 8,
             # "update_freq": 4,
             "update_freq": 4,
             # "update_freq": 500,
@@ -155,8 +161,9 @@ class DoubleDuelingDQNAgent(object):
             self.actions_onehot = tf.one_hot(self.actions, env.action_space.n, dtype=tf.float32, name="action_onehot")
             # self.action = tf.placeholder(shape=[None], dtype=tf.int32, name= "action")
             self.q = tf.reduce_sum(tf.multiply(self.mainQN.Qout, self.actions_onehot), axis=1)
-            self.td_error = tf.square(self.target_q_t - self.q)
-            self.loss = tf.reduce_mean(self.td_error)
+            # self.td_error = tf.square(self.target_q_t - self.q)
+            self.td_error = self.target_q_t - self.q
+            self.loss = tf.reduce_mean(clipped_error(self.td_error))
 
             self.learning_rate = 0.00025
             self.learning_rate_minimum = 0.00025
@@ -225,9 +232,6 @@ class DoubleDuelingDQNAgent(object):
 
     def learn(self, step_i, state, reward, action, done):
 
-        # act
-        # action, obs, reward, done, _ = self.act(self.env)
-
         self.history.add(state)
         self.memory.add(state, reward, action, done)
 
@@ -282,7 +286,6 @@ class DoubleDuelingDQNAgent(object):
 
             if step_i % 500 == 499:
                 self.updateTarget(self.targetOps, self.sess)
-
                 # self.writer.add_summary(summary, self.total_steps)
                 # self.train_writer.add_summary(summary, self.total_steps)
         return self.total_loss, self.total_q, self.update_count, state, loss, self.e
