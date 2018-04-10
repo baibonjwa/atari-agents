@@ -112,5 +112,5 @@ dqn/
 results/
 log/
 .vscode/
-.pb
-.pbtxt
+*.pb
+*.pbtxt

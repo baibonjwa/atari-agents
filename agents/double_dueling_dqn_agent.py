@@ -19,49 +19,6 @@ def clipped_error(x):
   except:
     return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
 
-def conv2d(x,
-           output_dim,
-           kernel_size,
-           stride,
-           initializer=tf.contrib.layers.xavier_initializer(),
-           activation_fn=tf.nn.relu,
-           data_format='NHWC',
-           padding='VALID',
-           name='conv2d'):
-  with tf.variable_scope(name):
-    if data_format == 'NCHW':
-      stride = [1, 1, stride[0], stride[1]]
-      kernel_shape = [kernel_size[0], kernel_size[1], x.get_shape()[1], output_dim]
-    elif data_format == 'NHWC':
-      stride = [1, stride[0], stride[1], 1]
-      kernel_shape = [kernel_size[0], kernel_size[1], x.get_shape()[-1], output_dim]
-
-    w = tf.get_variable('w', kernel_shape, tf.float32, initializer=initializer)
-    conv = tf.nn.conv2d(x, w, stride, padding, data_format=data_format)
-
-    b = tf.get_variable('biases', [output_dim], initializer=tf.constant_initializer(0.0))
-    out = tf.nn.bias_add(conv, b, data_format)
-
-  if activation_fn != None:
-    out = activation_fn(out)
-
-  return out, w, b
-
-def linear(input_, output_size, stddev=0.02, bias_start=0.0, activation_fn=None, name='linear'):
-    shape = input_.get_shape().as_list()
-
-    with tf.variable_scope(name):
-        w = tf.get_variable('Matrix', [shape[1], output_size], tf.float32,
-                            initializer=tf.random_normal_initializer(stddev=stddev))
-        b = tf.get_variable('bias', [output_size],
-                            initializer=tf.constant_initializer(bias_start))
-
-        out = tf.nn.bias_add(tf.matmul(input_, w), b)
-
-        if activation_fn != None:
-            return activation_fn(out), w, b
-        return out, w, b
-
 class Qnetwork():
     # pylint: disable=too-many-instance-attributes
     def __init__(self, h_size, action_space, name):
@@ -82,8 +39,8 @@ class Qnetwork():
             self.conv3_flat = tf.reshape(self.conv3,
                                         [-1, functools.reduce(lambda x, y: x * y, shape[1:])])
 
-            self.conv4, self.w['l4_w'], self.w['l4_b'] = linear(self.conv3_flat, 512, activation_fn=tf.nn.relu, name='conv4')
-            self.Qout, self.q['q_w'], self.q['q_b'] = linear(self.conv4, action_space, name='Qout')
+            self.conv4 = slim.fully_connected(self.conv3_flat, 512, activation_fn=tf.nn.relu, scope='conv4')
+            self.Qout = slim.fully_connected(self.conv4, action_space, activation_fn=None, scope='Qout')
 
             # Dueling
             # self.value_hid, self.w['l4_val_w'], self.w['l4_val_b'] = \
