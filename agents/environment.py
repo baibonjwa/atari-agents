@@ -22,11 +22,7 @@ class Environment:
 
         if done:
             break
-      # self.done = done
       obs = imresize(rgb2gray(obs)/255., (84, 84))
-      # done = _.get('ale.lives') < self.lives
-      # self.evn.render()
-    #   return obs, reward, done, _
       return obs, cumulated_reward, done, _
 
   def reset(self):

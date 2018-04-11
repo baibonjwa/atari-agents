@@ -9,7 +9,6 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim # pylint: disable=E0611
 from scipy.misc import imresize
 from .history import History
-from .memory import Memory
 
 def clipped_error(x):
   # Huber loss
@@ -59,27 +58,11 @@ class Qnetwork():
 
             self.predict = tf.argmax(self.Qout, 1)
 
-        # optimizer
-        # self.targetQ = tf.placeholder(shape=[None], dtype=tf.float32)
-        # self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
-        # self.actions_onehot = tf.one_hot(self.actions, action_space, dtype=tf.float32)
-
-        # self.Q = tf.reduce_sum(tf.multiply(self.Qout, self.actions_onehot), axis=1)
-
-        # self.td_error = tf.square(self.targetQ - self.Q)
-        # self.loss = tf.reduce_mean(self.td_error)
-        # # self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
-        # # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
-        # # self.trainer = tf.train.AdamOptimizer(learning_rate=0.00025)
-        # self.trainer = tf.train.RMSPropOptimizer(0.00025, momentum=0.95, epsilon=0.01)
-        # self.optimizer = self.trainer.minimize(self.loss)
-
 class DoubleDuelingDQNAgent(object):
     def __init__(self, env, sess, FLAGS):
 
         self.env = env
         self.history = History()
-        self.memory = Memory()
         self.action_space = env.action_space
 
         self.config = {

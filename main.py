@@ -11,7 +11,6 @@ import sys
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from agents.memory import Memory
 from agents.replay_memory import ReplayMemory
 from agents.history import History
 from agents.environment import Environment
