@@ -8,7 +8,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim # pylint: disable=E0611
 from scipy.misc import imresize
-from .utils import variable_summaries, rgb2gray
 from .history import History
 from .memory import Memory
 
@@ -143,20 +142,20 @@ class DoubleDuelingDQNAgent(object):
                 self.learning_rate_op, momentum=0.95, epsilon=0.01).minimize(self.loss)
 
         with tf.variable_scope('summary'):
-            scalar_summary_tags = ['average.reward', 'average.loss', 'average.q', \
-                'episode.max reward', 'episode.min reward', 'episode.avg reward', 'episode.num of game', 'training.learning_rate', 'e']
+            scalar_summary_tags = ['avg.reward', 'avg.loss', 'avg.q', \
+                'ep.reward.max', 'ep.reward.min', 'ep.reward.avg', 'ep.num_of_game', 'training.learning_rate', 'e']
 
             self.summary_placeholders = {}
             self.summary_ops = {}
 
             for tag in scalar_summary_tags:
-                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
+                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag)
                 self.summary_ops[tag]  = tf.summary.scalar("%s" % (tag), self.summary_placeholders[tag])
 
-            histogram_summary_tags = ['episode.rewards', 'episode.actions']
+            histogram_summary_tags = ['ep.rewards', 'ep.actions']
 
             for tag in histogram_summary_tags:
-                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
+                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag)
                 self.summary_ops[tag]  = tf.summary.histogram(tag, self.summary_placeholders[tag])
 
         self.saver = tf.train.Saver()
@@ -172,7 +171,7 @@ class DoubleDuelingDQNAgent(object):
 
         self.jList = []
         self.rList = []
-        self.update_count = 0
+        self.update_count = 1
         self.total_loss = 0.
         self.total_q = 0.
 
@@ -222,7 +221,6 @@ class DoubleDuelingDQNAgent(object):
                 #         self.actions:trainBatch[:, 1],
                 #     })
 
-                # pdb.set_trace()
                 q_t_plus_1 = self.sess.run(self.targetQN.Qout, feed_dict={ self.targetQN.input_data:s_t_plus_1 })
                 terminal = np.array(terminal) + 0.
                 max_q_t_plus_1 = np.max(q_t_plus_1, axis=1)
@@ -243,8 +241,7 @@ class DoubleDuelingDQNAgent(object):
 
             if step_i % 500 == 499:
                 self.updateTarget(self.targetOps, self.sess)
-                # self.writer.add_summary(summary, self.total_steps)
-                # self.train_writer.add_summary(summary, self.total_steps)
+
         return self.total_loss, self.total_q, self.update_count, state, loss, self.e
 
     def act(self, step_i, env):
@@ -255,7 +252,6 @@ class DoubleDuelingDQNAgent(object):
         # use env rather than self.env because self.env is Gym object and env is Environemnt object
         obs, reward, done, _ = env.step(a)
         self.env.render()
-        # obs = imresize(rgb2gray(obs)/255., (84, 84))
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):
@@ -263,7 +259,6 @@ class DoubleDuelingDQNAgent(object):
             total_vars = len(tfVars)
             op_holder = []
             for idx, var in enumerate(tfVars[0:total_vars//2]):
-                # pdb.set_trace()
                 op_holder.append(tfVars[idx + total_vars//2].assign(var.value()))
                 # tfVars[idx + total_vars//2].assign(
                 #     (var.value() * tau) + ((1 - tau) * tfVars[idx + total_vars//2].value())))
@@ -272,11 +267,3 @@ class DoubleDuelingDQNAgent(object):
     def updateTarget(self, op_holder, sess):
         for op in op_holder:
             sess.run(op)
-
-    def inject_summary(self, tag_dict, step):
-      summary_str_lists = self.sess.run([self.summary_ops[tag] for tag in tag_dict.keys()], {
-        self.summary_placeholders[tag]: value for tag, value in tag_dict.items()
-      })
-      for summary_str in summary_str_lists:
-        self.writer.add_summary(summary_str, step)
-

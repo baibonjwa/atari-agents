@@ -11,7 +11,6 @@ import sys
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from agents.utils import variable_summaries
 from agents.memory import Memory
 from agents.replay_memory import ReplayMemory
 from agents.history import History
@@ -93,19 +92,14 @@ def main():
         actions = []
 
         ep_reward = 0.
-        # e_tf = tf.placeholder(shape=[None], dtype=tf.float32)
-        # loss_tf = tf.placeholder(shape=[None], dtype=tf.float32)
-        # r_tf = tf.placeholder(shape=[None], dtype=tf.float32)
         e_list = []
         loss_list = []
-        # variable_summaries(e_tf, 'e')
-        # variable_summaries(loss_tf, 'loss')
-        # variable_summaries(r_tf, 'reward')
 
         total_reward = 0.
         reward = 0
         done = False
         episode_num = 0
+        episode_num_total = 0
         avg_reward = 0.
         avg_loss  = 0.
         avg_q = 0.
@@ -120,6 +114,7 @@ def main():
             history.add(obs)
         agent.history = history
         agent.memory = memory
+        merged = tf.summary.merge_all()
 
         #  for i in tqdm(range(episode_count)):
         for step_i in tqdm(range(total_steps), ncols=70, initial=0):
@@ -132,16 +127,10 @@ def main():
             action, obs, reward, done, _ = agent.act(step_i, env)
             total_loss, total_q, update_count, s1, loss, e = agent.learn(step_i, obs, reward, action, done)
 
-            # e_list.append(e)
-            # loss_list.append(loss)
-            # ep_rewards.append(reward)
-
             if done:
-                # pdb.set_trace()
                 env.reset()
                 episode_num += 1
-                # episode_rewards_sum = np.sum(episode_rewards)
-                # rewards.append(episode_rewards_sum)
+                episode_num_total += 1
                 ep_rewards.append(ep_reward)
                 ep_reward = 0.
             else:
@@ -149,14 +138,6 @@ def main():
 
             actions.append(action)
             total_reward += reward
-
-                # merged = tf.summary.merge_all()
-                # summary = sess.run(merged, feed_dict={
-                #     r_tf: rewards,
-                #     e_tf: e_list,
-                #     # loss_tf: loss_list,
-                # })
-                # agent.writer.add_summary(summary, episode_num)
 
             # TODO: there is hard code
             if step_i >= agent.config["pre_train_steps"]:
@@ -172,7 +153,6 @@ def main():
                     except:
                         max_ep_reward, min_ep_reward, avg_ep_reward = 0, 0, 0
 
-                    # pdb.set_trace()
                     print('\navg_r: %.4f, avg_l: %.6f, avg_q: %3.6f, avg_ep_r: %.4f, max_ep_r: %.4f, min_ep_r: %.4f, # game: %d, e: %.4f' \
                         % (avg_reward, avg_loss, avg_q, avg_ep_reward, max_ep_reward, min_ep_reward, episode_num, e))
 
@@ -180,21 +160,6 @@ def main():
                     #     self.step_assign_op.eval({self.step_input: self.step + 1})
                     #     self.save_model(self.step + 1)
                     #     max_avg_ep_reward = max(max_avg_ep_reward, avg_ep_reward)
-
-                    if step_i > 180:
-                        agent.inject_summary({
-                            'average.reward': avg_reward,
-                            'average.loss': avg_loss,
-                            'average.q': avg_q,
-                            'episode.max reward': max_ep_reward,
-                            'episode.min reward': min_ep_reward,
-                            'episode.avg reward': avg_ep_reward,
-                            'episode.num of game': episode_num,
-                            'episode.rewards': ep_rewards,
-                            'episode.actions': actions,
-                            'training.learning_rate': agent.learning_rate_op.eval({agent.learning_rate_step: step_i}),
-                            'e': e,
-                        }, step_i)
 
                     episode_num = 0
                     total_reward = 0.
@@ -205,20 +170,21 @@ def main():
                     ep_rewards = []
                     actions = []
 
-            # if done:
-            #     episode_num += 1
-            #     episode_rewards_sum = np.sum(episode_rewards)
-            #     rewards.append(episode_rewards_sum)
-            #     episode_rewards = []
-            #     env.reset()
-
-                # merged = tf.summary.merge_all()
-                # summary = sess.run(merged, feed_dict={
-                #     r_tf: rewards,
-                #     e_tf: e_list,
-                #     # loss_tf: loss_list,
-                # })
-                # agent.writer.add_summary(summary, episode_num)
+                if done:
+                    summary = sess.run(merged, feed_dict={
+                        agent.summary_placeholders['ep.reward.avg']: avg_ep_reward,
+                        agent.summary_placeholders['ep.reward.max']: max_ep_reward,
+                        agent.summary_placeholders['ep.reward.min']: min_ep_reward,
+                        agent.summary_placeholders['ep.num_of_game']: episode_num,
+                        agent.summary_placeholders['avg.reward']: avg_reward,
+                        agent.summary_placeholders['avg.loss']: avg_loss,
+                        agent.summary_placeholders['avg.q']: avg_q,
+                        agent.summary_placeholders['training.learning_rate']: agent.learning_rate_op.eval({agent.learning_rate_step: step_i}),
+                        agent.summary_placeholders['e']: e,
+                        agent.summary_placeholders['ep.rewards']: ep_rewards,
+                        agent.summary_placeholders['ep.actions']: actions,
+                    })
+                    agent.writer.add_summary(summary, episode_num_total)
 
     env.close()
 
