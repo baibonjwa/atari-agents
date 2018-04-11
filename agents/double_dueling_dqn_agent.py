@@ -13,10 +13,10 @@ from .history import History
 
 def clipped_error(x):
   # Huber loss
-  try:
-    return tf.select(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
-  except:
-    return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+    try:
+        return tf.select(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
+    except:
+        return tf.where(tf.abs(x) < 1.0, 0.5 * tf.square(x), tf.abs(x) - 0.5)
 
 class Qnetwork():
     # pylint: disable=too-many-instance-attributes
@@ -38,41 +38,33 @@ class Qnetwork():
             self.conv3_flat = tf.reshape(self.conv3,
                                         [-1, functools.reduce(lambda x, y: x * y, shape[1:])])
 
-            self.conv4 = slim.fully_connected(self.conv3_flat, 512, activation_fn=tf.nn.relu, scope='conv4')
-            self.Qout = slim.fully_connected(self.conv4, action_space, activation_fn=None, scope='Qout')
+            # Disable Dueling
+            # self.conv4 = slim.fully_connected(self.conv3_flat, 512, activation_fn=tf.nn.relu, scope='conv4')
+            # self.Qout = slim.fully_connected(self.conv4, action_space, activation_fn=None, scope='Qout')
 
-            # Dueling
-            # self.value_hid, self.w['l4_val_w'], self.w['l4_val_b'] = \
-            #     linear(self.conv3_flat, 512, activation_fn=tf.nn.relu, name=name + 'value_hid')
+            # Enable Dueling
+            self.value_hid = slim.fully_connected(self.conv3_flat, 512, activation_fn=tf.nn.relu, scope=name + 'value_hid')
+            self.adv_hid = slim.fully_connected(self.conv3_flat, 512, activation_fn=tf.nn.relu, scope=name + 'adv_hid')
+            self.Value = slim.fully_connected(self.value_hid, 1, scope=name + 'value_out')
+            self.Advantage = slim.fully_connected(self.adv_hid, action_space, activation_fn=None, scope=name + 'adv_out')
 
-            # self.adv_hid, self.w['l4_adv_w'], self.w['l4_adv_b'] = \
-            #     linear(self.conv3_flat, 512, activation_fn=tf.nn.relu, name=name + 'adv_hid')
-
-            # self.Value, self.w['val_w_out'], self.w['val_w_b'] = \
-            # linear(self.value_hid, 1, name=name + 'value_out')
-
-            # self.Advantage, self.w['adv_w_out'], self.w['adv_w_b'] = \
-            # linear(self.adv_hid, action_space, name=name + 'adv_out')
-
-            # self.Qout = self.Value + tf.subtract(
-            #     self.Advantage, tf.reduce_mean(self.Advantage, axis=1, keep_dims=True))
+            self.Qout = self.Value + tf.subtract(
+                self.Advantage, tf.reduce_mean(self.Advantage, axis=1, keep_dims=True))
 
             self.predict = tf.argmax(self.Qout, 1)
 
 class DoubleDuelingDQNAgent(object):
     def __init__(self, env, sess, FLAGS):
 
+        self.flags = FLAGS
         self.env = env
         self.history = History()
         self.memory = ReplayMemory()
         self.action_space = env.action_space
 
         self.config = {
-            #  "batch_size": 16,
             "batch_size": 32,
-            # "update_freq": 4,
             "update_freq": 4,
-            # "update_freq": 500,
             "y": .99,
             "startE": 1.0,
             "endE": 0.1,
@@ -80,7 +72,7 @@ class DoubleDuelingDQNAgent(object):
             # "annealing_steps": 10000,
             "annealing_steps": 50000,
             "num_episodes": 10000,
-            "pre_train_steps": 2500,
+            "pre_train_steps": 10000,
             # "pre_train_steps": 2,
             "max_epLength": 1000,
             "screen_width": 84,
@@ -150,8 +142,7 @@ class DoubleDuelingDQNAgent(object):
         init = tf.global_variables_initializer()
         self.sess.run(init)
 
-        saver = tf.train.Saver()
-        save_path = saver.save(self.sess, "./model.ckpt")
+        self.saver.save(self.sess, "./model.ckpt")
 
         self.e = self.config["startE"]
         self.stepDrop = (self.config["startE"] - self.config["endE"]) \
@@ -239,7 +230,8 @@ class DoubleDuelingDQNAgent(object):
             a = self.sess.run(self.mainQN.predict, feed_dict={self.mainQN.input_data:[self.history.get()]})[0]
         # use env rather than self.env because self.env is Gym object and env is Environemnt object
         obs, reward, done, _ = env.step(a)
-        self.env.render()
+        if self.flags.render:
+            self.env.render()
         return a, obs, reward, done, _
 
     def updateTargetGraph(self, tfVars, tau):

@@ -30,11 +30,12 @@ timestamp = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.now())
 # flags.DEFINE_boolean('double_q', False, 'Whether to use double q-learning')
 
 flags.DEFINE_string('env_name', 'Breakout-v0', 'The name of gym environment to use')
+flags.DEFINE_boolean('render', True, 'Whether to render the game window')
 # flags.DEFINE_integer('action_repeat', 4, 'The number of action to be repeated')
 flags.DEFINE_string('agent_name', 'DoubleDuelingDQNAgent', 'THe name of agent to use')
-flags.DEFINE_boolean('is_train', True, 'Whether to do training or testing')
+# flags.DEFINE_boolean('is_train', True, 'Whether to do training or testing')
 flags.DEFINE_integer('random_seed', 123, 'Value of random seed')
-flags.DEFINE_string('log_dir', './log', 'Value of random seed')
+flags.DEFINE_string('log_dir', './logs', 'Value of random seed')
 flags.DEFINE_string('timestamp', timestamp, 'Timestamp')
 FLAGS = flags.FLAGS
 
@@ -47,7 +48,6 @@ AVAILABLE_AGENT_LIST = [
         'A3cFfAgent',
         'A3cLstmAgent',
         ]
-
 
 def main():
     """This is main function"""
@@ -62,8 +62,6 @@ def main():
     logger.setLevel(logging.INFO)
 
     env = gym.make(FLAGS.env_name)
-    # env = env.unwrapped
-    # pdb.set_trace()
 
     with tf.Session() as sess:
         #  sess = tf_debug.LocalCLIDebugWrapperSession(sess)

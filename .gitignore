@@ -111,6 +111,7 @@ dqn/
 */**/log
 results/
 log/
+logs/
 .vscode/
 *.pb
 *.pbtxt
