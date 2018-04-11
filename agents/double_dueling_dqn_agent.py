@@ -7,6 +7,7 @@ import time
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim # pylint: disable=E0611
+from agents.replay_memory import ReplayMemory
 from scipy.misc import imresize
 from .history import History
 
@@ -63,6 +64,7 @@ class DoubleDuelingDQNAgent(object):
 
         self.env = env
         self.history = History()
+        self.memory = ReplayMemory()
         self.action_space = env.action_space
 
         self.config = {
@@ -147,6 +149,9 @@ class DoubleDuelingDQNAgent(object):
 
         init = tf.global_variables_initializer()
         self.sess.run(init)
+
+        saver = tf.train.Saver()
+        save_path = saver.save(self.sess, "./model.ckpt")
 
         self.e = self.config["startE"]
         self.stepDrop = (self.config["startE"] - self.config["endE"]) \

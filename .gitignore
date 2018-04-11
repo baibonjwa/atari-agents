@@ -114,3 +114,5 @@ log/
 .vscode/
 *.pb
 *.pbtxt
+checkpoint
+model.*
