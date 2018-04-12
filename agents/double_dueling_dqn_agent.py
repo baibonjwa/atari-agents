@@ -142,7 +142,7 @@ class DoubleDuelingDQNAgent(object):
         init = tf.global_variables_initializer()
         self.sess.run(init)
 
-        self.saver.save(self.sess, "./model.ckpt")
+        self.saver.save(self.sess, "./ckpt/init/init.ckpt")
 
         self.e = self.config["startE"]
         self.stepDrop = (self.config["startE"] - self.config["endE"]) \

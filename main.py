@@ -5,6 +5,7 @@ import datetime
 import pdb
 import random
 import logging
+import pathlib
 import timeit
 import time
 import sys
@@ -75,8 +76,15 @@ def main():
                 FLAGS.env_name,
                 str(agent_klass.__name__),
                 timestamp
-                #  hashlib.sha224(json.dumps(agent.config).encode('utf-8')).hexdigest()
                 )
+
+        ckptdir = './ckpt/%s/%s/%s/' % (
+                FLAGS.env_name,
+                str(agent_klass.__name__),
+                timestamp
+                )
+
+        pathlib.Path(ckptdir).mkdir(parents=True, exist_ok=True)
 
         env = wrappers.Monitor(env, directory=outdir, force=True)
         env.seed(0)
@@ -101,6 +109,7 @@ def main():
         avg_loss  = 0.
         avg_q = 0.
         avg_ep_reward, max_ep_reward, min_ep_reward = 0., 0., 0.
+        max_avg_ep_reward = 0
 
         agent.env = env
         memory = ReplayMemory()
@@ -153,10 +162,9 @@ def main():
                     print('\navg_r: %.4f, avg_l: %.6f, avg_q: %3.6f, avg_ep_r: %.4f, max_ep_r: %.4f, min_ep_r: %.4f, # game: %d, e: %.4f' \
                         % (avg_reward, avg_loss, avg_q, avg_ep_reward, max_ep_reward, min_ep_reward, episode_num, e))
 
-                    # if max_avg_ep_reward * 0.9 <= avg_ep_reward:
-                    #     self.step_assign_op.eval({self.step_input: self.step + 1})
-                    #     self.save_model(self.step + 1)
-                    #     max_avg_ep_reward = max(max_avg_ep_reward, avg_ep_reward)
+                    if max_avg_ep_reward * 0.9 <= avg_ep_reward:
+                        agent.saver.save(sess, ckptdir + "avg_ep_reward_%s/model.ckpt" % (avg_ep_reward))
+                        max_avg_ep_reward = max(max_avg_ep_reward, avg_ep_reward)
 
                     episode_num = 0
                     total_reward = 0.
