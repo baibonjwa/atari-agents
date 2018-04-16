@@ -191,7 +191,7 @@ def main():
                     })
                     agent.writer.add_summary(summary, episode_num_total)
 
-    env.close()
+    # env.close()
 
     logger.info("Successfully ran RandomAgent. Now trying to upload results to the scoreboard. \
             If it breaks, you can always just try re-uploading the same results.")
