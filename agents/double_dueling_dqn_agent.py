@@ -89,14 +89,14 @@ class DoubleDuelingDQNAgent(object):
         self.sess = sess
 
         with tf.variable_scope('optimizer'):
-            self.target_q_t = tf.placeholder(shape=[None], dtype=tf.float32)
+            self.target_q_t = tf.placeholder(shape=[None], dtype=tf.float32, name="target_q_t")
             self.actions = tf.placeholder(shape=[None], dtype=tf.int32, name="action")
             self.actions_onehot = tf.one_hot(self.actions, env.action_space.n, dtype=tf.float32, name="action_onehot")
             # self.action = tf.placeholder(shape=[None], dtype=tf.int32, name= "action")
             self.q = tf.reduce_sum(tf.multiply(self.mainQN.Qout, self.actions_onehot), axis=1)
             # self.td_error = tf.square(self.target_q_t - self.q)
             self.td_error = self.target_q_t - self.q
-            self.loss = tf.reduce_mean(clipped_error(self.td_error))
+            self.loss = tf.reduce_mean(clipped_error(self.td_error), name="loss")
 
             self.learning_rate = 0.00025
             self.learning_rate_minimum = 0.00025

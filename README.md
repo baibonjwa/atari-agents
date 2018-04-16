@@ -32,7 +32,14 @@ To train a model for Breakout:
 
     $ python main.py
 
+    or
+
+    // Disable game window. Be able to improve training effect with GPU.
+    $ python main.py --render=False
+
 ## Results
+
+GPU: GTX 1060 3G
 
 TBD
 
