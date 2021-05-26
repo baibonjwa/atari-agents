@@ -68,9 +68,10 @@ class DoubleDuelingDQNAgent(object):
             "y": .99,
             "startE": 1.0,
             "endE": 0.1,
-            "total_steps": 25000000,
-            # "annealing_steps": 10000,
-            "annealing_steps": 500000,
+            #  "total_steps": 25000000,
+            "total_steps": 2500000,
+            "annealing_steps": 10000,
+            #  "annealing_steps": 500000,
             "num_episodes": 10000,
             "pre_train_steps": 10000,
             # "pre_train_steps": 2,
@@ -81,7 +82,7 @@ class DoubleDuelingDQNAgent(object):
             "path": "./ckpt",
             "h_size": 512,
             "tau": 0.001,
-            "target_q_update_step": 5000,
+            "target_q_update_step": 500,
         }
 
         self.mainQN = Qnetwork(self.config["h_size"], env.action_space.n, 'main')
